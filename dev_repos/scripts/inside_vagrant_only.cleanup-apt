@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+ret=1
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get clean
+ret=$?
+if [[ $ret -eq 0 ]]; then
+	apt-get autoremove
+	ret=$?
+fi
+
+exit $ret

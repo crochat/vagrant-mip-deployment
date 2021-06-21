@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+ret=1
+
+apt-get update
+ret=$?
+if [[ $ret -eq 0 ]]; then
+	apt-get --yes -u dist-upgrade
+	ret=$?
+fi
+
+exit $ret

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+ret=1
+
+sed --in-place 's/^GRUB_CMDLINE_LINUX=""$/GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"/' /etc/default/grub
+ret=$?
+if [[ $ret -eq 0 ]]; then
+	update-grub
+	ret=$?
+fi
+
+exit $ret

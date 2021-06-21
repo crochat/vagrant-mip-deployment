@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+SSHCONFIG="vagrant-ssh.config"
+
+VM=""
+VERBOSE=0
+
+OK=()
+KO=()
+
+ARGS=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-v)
+			VERBOSE=1
+			shift
+			;;
+		*)
+			if [[ "$VM" = "" ]]; then
+				VM="$1"
+			else
+				ARGS+=("$1")
+			fi
+			shift
+			;;
+	esac
+done
+set -- "${ARGS[@]}"
+
+for vm in $(cat $SSHCONFIG | awk '/^Host/ {print $2}'); do
+	if [[ "$VM" != "" && "$VM" != "$vm" ]]; then
+		continue
+	fi
+
+	host_name=$(ssh -F $SSHCONFIG $vm hostname)
+	if [[ $VERBOSE -eq 1 ]]; then echo "Testing $vm ($host_name)..."; fi
+	if [[ "$host_name" != "" ]]; then
+		if [[ -f test-$host_name ]]; then
+			rm test-$host_name
+		fi
+		ssh -F $SSHCONFIG $vm touch /vagrant/test-\$\(hostname\)
+		if [[ -f test-$host_name ]]; then
+			rm test-$host_name
+			OK+=("$vm")
+		else
+			KO+=("$vm")
+		fi
+	fi
+done
+
+if [[ "$VM" != "" ]]; then
+	if [[ "$VM" = "${OK[@]}" ]]; then
+		echo "OK"
+	else
+		echo "KO"
+	fi
+else
+	echo "OK: ${OK[@]}"
+	echo "KO: ${KO[@]}"
+fi

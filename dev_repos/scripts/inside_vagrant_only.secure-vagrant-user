@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+ret=1
+
+passwd --lock vagrant
+ret=$?
+
+exit $ret

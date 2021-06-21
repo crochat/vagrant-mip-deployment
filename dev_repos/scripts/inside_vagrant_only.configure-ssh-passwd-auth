@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+ret=1
+
+sed --in-place 's/^PasswordAuthentication no/#PasswordAuthentication no/g' /etc/ssh/sshd_config
+ret=$?
+if [[ $ret -eq 0 ]]; then
+	systemctl restart ssh
+	ret=$?
+fi
+
+exit $ret

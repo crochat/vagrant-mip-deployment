@@ -1,0 +1,44 @@
+#!/bin/bash
+
+result=1
+
+hosts_file=hosts.dat
+host_fqdn="My.MIP.FULLY.QUALIFIED.DOMAIN.NAME"
+
+my_other_hostname="$1"
+if [[ "$my_other_hostname" != "" ]]; then
+	echo "<$my_other_hostname>"
+	my_other_hostname=" $my_other_hostname"
+fi
+
+hosts_path=""
+
+my_host_type="host"
+dev_path=""
+my_hostname=$(hostname)
+my_routable_dev=$(ip r | awk '/^default/ {print $5}')
+my_routable_ip=$(ip address show $my_routable_dev | awk '/^[ \t]+inet / {print $2}' | cut -d/ -f1)
+
+if [[ -d /vagrant ]]; then
+	my_host_type="guest"
+else
+	my_other_hostname=" $host_fqdn"
+fi
+
+if [[ "$my_host_type" = "guest" ]]; then
+	hosts_path="/vagrant"
+	hosts_file="$hosts_path/$hosts_file"
+fi
+
+if [[ ! -f $hosts_file ]]; then
+	touch $hosts_file
+fi
+
+if [[ "$(grep $my_hostname $hosts_file)" != "" ]]; then
+	sed --in-place "/ $my_hostname /d" $hosts_file
+fi
+
+echo "$my_host_type $my_hostname ${my_routable_ip}${my_other_hostname}" >> $hosts_file
+result=$?
+
+exit $result

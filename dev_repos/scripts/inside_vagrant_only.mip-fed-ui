@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+PUBLIC_MIP_PROTOCOL=""
+PUBLIC_MIP_HOST=""
+KEYCLOAK_PROTOCOL=""
+KEYCLOAK_URL=""
+BRANCH=""
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--public-mip-protocol)
+			PUBLIC_MIP_PROTOCOL="$2"
+			shift
+			shift
+			;;
+		--public-mip-host)
+			PUBLIC_MIP_HOST="$2"
+			shift
+			shift
+			;;
+		--keycloak-protocol)
+			KEYCLOAK_PROTOCOL="$2"
+			shift
+			shift
+			;;
+		--keycloak-url)
+			KEYCLOAK_URL="$2"
+			shift
+			shift
+			;;
+		--branch)
+			BRANCH="$2"
+			shift
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+ret=1
+if [[ "$PUBLIC_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_HOST" = "" || "$KEYCLOAK_PROTOCOL" = "" || "$KEYCLOAK_URL" = "" ]]; then
+	exit $ret
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+#git clone https://github.com/HBPMedical/mip-deployment
+#ret=$?
+#if [[ $ret -eq 0 ]]; then
+	#cd mip-deployment
+	#git checkout dev_mipscript
+	#ret=$?
+#fi
+
+#if [[ $ret -eq 0 ]]; then
+	#cd ..
+#fi
+
+ret=0
+if [[ $ret -eq 0 ]]; then
+	if [[ "$BRANCH" != "" ]]; then
+		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --branch "$BRANCH" --no-run --keep-installer install
+	else
+		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --no-run --keep-installer install
+	fi
+	ret=$?
+fi
+
+if [[ $ret -eq 0 ]]; then
+	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
+	#/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --host $(awk '/^host/ {if(NF == 4) print $4; else print $3}' /vagrant/hosts.dat):$(grep -E -A10 "^[ \t]+config.vm.define \"ui\"" /vagrant/Vagrantfile | grep forwarded_port | awk -F 'host:' '{print $2}' | awk -F ',' '{print $1}' | awk '{print $1}') --exareme-ip $(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat) --with-keycloak-authentication configure all
+	/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --exareme-ip "$(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat)" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
+	ret=$?
+fi
+
+# TO DO BY HAND ONCE IN AS mipadmin, AND ONCE THE FEDERATION DEPLOYMENT HAS BEEN DONE ON THE PUSHER
+/vagrant/dev_repos/mip-deployment/mip --quiet --yes start
+ret=$?
+
+exit $ret

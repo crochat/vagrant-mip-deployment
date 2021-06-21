@@ -1,0 +1,709 @@
+{
+  "code": "ftract",
+  "groups": [
+    {
+      "code": "general",
+      "groups": [
+        {
+          "code": "participant_characteristics",
+          "groups": [
+            {
+              "code": "demographic",
+              "label": "Demographic",
+              "variables": [
+                {
+                  "code": "age",
+                  "description": "Value in months for participant/subject's age, calculated as elapsed time since the birth of the participant/subject.",
+                  "enumerations": [],
+                  "isCategorical": false,
+                  "label": "Age",
+                  "maxValue": "1800",
+                  "methodology": "",
+                  "minValue": "0",
+                  "sql_type": "int",
+                  "type": "int",
+                  "units": "months"
+                },
+                {
+                  "code": "sex",
+                  "description": "Birth sex assigned type : male, female.",
+                  "enumerations": [
+                    {
+                      "code": "F",
+                      "label": "Female"
+                    },
+                    {
+                      "code": "M",
+                      "label": "Male"
+                    },
+                    {
+                      "code": "None",
+                      "label": "Unknown"
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Sex",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                }
+              ]
+            }
+          ],
+          "label": "Participant_characteristics"
+        },
+        {
+          "code": "participant_history_and_family_history",
+          "groups": [
+            {
+              "code": "general_health_history",
+              "label": "General_health_history",
+              "variables": [
+                {
+                  "code": "febrile_convulsions",
+                  "description": "Indicate if the patient had febrile convulsions.",
+                  "enumerations": [
+                    {
+                      "code": "T",
+                      "label": "True"
+                    },
+                    {
+                      "code": "F",
+                      "label": "False"
+                    },
+                    {
+                      "code": "na",
+                      "label": "Not applicable"
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Febrile convulsions indicator",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "neonatal_disorder",
+                  "description": "Indicate if the patient had neonatal disorder.",
+                  "enumerations": [
+                    {
+                      "code": "T",
+                      "label": "True"
+                    },
+                    {
+                      "code": "F",
+                      "label": "False"
+                    },
+                    {
+                      "code": "na",
+                      "label": "Not applicable"
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Neonatal disorder indicator",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "cns_infection",
+                  "description": "Indicate if the patient had CNS infection.",
+                  "enumerations": [
+                    {
+                      "code": "T",
+                      "label": "True"
+                    },
+                    {
+                      "code": "F",
+                      "label": "False"
+                    },
+                    {
+                      "code": "na",
+                      "label": "Not applicable"
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "CNS infection indicator",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "commorbidity",
+                  "description": "Indicate the presence of one or more additional conditions co-occuring.",
+                  "enumerations": [
+                    {
+                      "code": "T",
+                      "label": "True"
+                    },
+                    {
+                      "code": "F",
+                      "label": "False"
+                    },
+                    {
+                      "code": "na",
+                      "label": "Not applicable"
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Additional conditions indicator",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                }
+              ]
+            }
+          ],
+          "label": "Participant_history_and_family_history"
+        },
+        {
+          "code": "assessments_and_examinations",
+          "groups": [
+            {
+              "code": "physical",
+              "groups": [
+                {
+                  "code": "neurological_examination",
+                  "label": "Neurological_examination",
+                  "variables": [
+                    {
+                      "code": "handedness",
+                      "description": "Choose the hand which the participant/subject uses predominantly, not necessarily the hand the participant/subject writes with exclusively",
+                      "enumerations": [
+                        {
+                          "code": "R",
+                          "label": "Right"
+                        },
+                        {
+                          "code": "L",
+                          "label": "Left"
+                        },
+                        {
+                          "code": "A",
+                          "label": "Ambidextrous"
+                        },
+                        {
+                          "code": "U",
+                          "label": "Unknown"
+                        }
+                      ],
+                      "isCategorical": true,
+                      "label": "Hand preference type",
+                      "methodology": "",
+                      "sql_type": "text",
+                      "type": "multinominal",
+                      "units": ""
+                    },
+                    {
+                      "code": "clinic_exam",
+                      "description": "Indicate if a clinical exam has been done.",
+                      "enumerations": [
+                        {
+                          "code": "N",
+                          "label": "No"
+                        },
+                        {
+                          "code": "Y",
+                          "label": "Yes"
+                        }
+                      ],
+                      "isCategorical": true,
+                      "label": "physical exam indicator",
+                      "methodology": "",
+                      "sql_type": "text",
+                      "type": "multinominal",
+                      "units": ""
+                    }
+                  ]
+                }
+              ],
+              "label": "Physical"
+            },
+            {
+              "code": "non_Imaging_diagnostics",
+              "label": "Non_Imaging_diagnostics",
+              "variables": [
+                {
+                  "code": "epil_type_after_seeg",
+                  "description": "Type of epilepsy diagnosed after the SEEG",
+                  "enumerations": [
+                    {
+                      "code": "central_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "central_right",
+                      "label": ""
+                    },
+                    {
+                      "code": "frontal_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "frontal_right",
+                      "label": ""
+                    },
+                    {
+                      "code": "indeterminate",
+                      "label": "Don't know the type of epilespy"
+                    },
+                    {
+                      "code": "insula_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "insula_right",
+                      "label": ""
+                    },
+                    {
+                      "code": "multifocal",
+                      "label": ""
+                    },
+                    {
+                      "code": "occipital_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "occipital_right",
+                      "label": ""
+                    },
+                    {
+                      "code": "parietal_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "parietal_right",
+                      "label": ""
+                    },
+                    {
+                      "code": "temporal_left",
+                      "label": ""
+                    },
+                    {
+                      "code": "temporal_right",
+                      "label": ""
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Type of Epilepsy",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "epil_duration",
+                  "description": "The epilepsy duration at the first SEEG.",
+                  "enumerations": [],
+                  "isCategorical": false,
+                  "label": "Duration at the first SEEG.",
+                  "maxValue": "150",
+                  "methodology": "",
+                  "minValue": "0",
+                  "sql_type": "int",
+                  "type": "int",
+                  "units": ""
+                },
+                {
+                  "code": "seizure_type_seeg",
+                  "description": "Indicate the type of seizure occurring during the seeg.",
+                  "enumerations": [
+                    {
+                      "code": "clusters",
+                      "label": ""
+                    },
+                    {
+                      "code": "diurnal",
+                      "label": ""
+                    },
+                    {
+                      "code": "nocturnal",
+                      "label": ""
+                    },
+                    {
+                      "code": "partial",
+                      "label": ""
+                    },
+                    {
+                      "code": "partial_secund_gene",
+                      "label": ""
+                    },
+                    {
+                      "code": "spasms",
+                      "label": ""
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Seizure type during SEEG",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "seizure_freq_seeg",
+                  "description": "Indicate the frequency of the seizures occurrence during the SEEG.",
+                  "enumerations": [
+                    {
+                      "code": "daily",
+                      "label": ""
+                    },
+                    {
+                      "code": "less_than_month",
+                      "label": ""
+                    },
+                    {
+                      "code": "monthly",
+                      "label": ""
+                    },
+                    {
+                      "code": "weekly",
+                      "label": ""
+                    }
+                  ],
+                  "isCategorical": true,
+                  "label": "Seizure during SEEG freq.",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "multinominal",
+                  "units": ""
+                },
+                {
+                  "code": "seeg_date",
+                  "description": "The SEEG date is considered as the reference. An anomysed value is given.",
+                  "isCategorical": false,
+                  "label": "SEEG Date",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "date",
+                  "units": ""
+                }
+              ]
+            },
+            {
+              "code": "imaging_diagnostics",
+              "label": "Imaging_diagnostics",
+              "variables": [
+                {
+                  "code": "post_res_MRI_date",
+                  "description": "MRI date after the surgery and it’s calculated according to the SEEG date",
+                  "isCategorical": false,
+                  "label": "Post resection MRI Imaging date",
+                  "methodology": "",
+                  "sql_type": "text",
+                  "type": "date",
+                  "units": ""
+                }
+              ]
+            }
+          ],
+          "label": "Assessments_and_examinations"
+        }
+      ],
+      "label": "General"
+    },
+    {
+      "code": "disease_injury_related_events",
+      "groups": [
+        {
+          "code": "classification",
+          "label": "Classification",
+          "variables": [
+            {
+              "code": "age_first_seizure",
+              "description": "Value in months for participant/subject's age, calculated as elapsed time since the date of birth of the participant/subject at the date of first seizure experienced; A seizure, formally known as an epileptic seizure, is a period of symptoms due to abnormally excessive or synchronous neuronal activity in the brain.",
+              "enumerations": [],
+              "isCategorical": false,
+              "label": "Participant Age when first seizure occurred",
+              "maxValue": "1800",
+              "methodology": "",
+              "minValue": "0",
+              "sql_type": "int",
+              "type": "int",
+              "units": "months"
+            },
+            {
+              "code": "epil_synd_hist",
+              "description": "Epilepsy syndrome observed on the participant/subject in the past",
+              "enumerations": [
+                {
+                  "code": "N",
+                  "label": "No history"
+                },
+                {
+                  "code": "U",
+                  "label": "Unknown"
+                },
+                {
+                  "code": "Y_febrile_convulsions",
+                  "label": "Yes - Febrile convulsions"
+                },
+                {
+                  "code": "Y_TBI",
+                  "label": "Yes - TBI"
+                },
+                {
+                  "code": "Y_CNS_infection",
+                  "label": "Yes - CNS infection"
+                },
+                {
+                  "code": "Y_neonatal_disorder",
+                  "label": "Yes - Neonatal disorder"
+                },
+                {
+                  "code": "Y_vascular",
+                  "label": "Yes – Vascular"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Epilepsy syndrome history",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            }
+          ]
+        }
+      ],
+      "label": "Disease_injury_related_events"
+    },
+    {
+      "code": "treatmen_ intervention_data",
+      "groups": [
+        {
+          "code": "drugs",
+          "label": "Drugs",
+          "variables": [
+            {
+              "code": "med_ccep",
+              "description": "Antiepileptic medication intake during CCEP. n/a means the entry was left empty.",
+              "isCategorical": false,
+              "label": "Medication concomitant CCEP",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "text",
+              "units": ""
+            },
+            {
+              "code": "other_med_ccep",
+              "description": "Other medication intake during CCEP. n/a means the entry was left empty.",
+              "isCategorical": false,
+              "label": "Medication concomitant CCEP – Other",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "text",
+              "units": ""
+            },
+            {
+              "code": "antiepil_med_surgery",
+              "description": "Antiepileptic treatment taken by the patient",
+              "enumerations": [
+                {
+                  "code": "U",
+                  "label": "Unknown"
+                },
+                {
+                  "code": "Y",
+                  "label": "Yes"
+                },
+                {
+                  "code": "N",
+                  "label": "No"
+                },
+                {
+                  "code": "na",
+                  "label": "Not applicable"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Antiepileptic treatment",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            }
+          ]
+        },
+        {
+          "code": "surgeries_and_other_procedures",
+          "label": "Surgeries_and_other_procedures",
+          "variables": [
+            {
+              "code": "anat_lesion",
+              "description": "Anatomical lesion observed on the participant/subject",
+              "enumerations": [
+                {
+                  "code": "Y",
+                  "label": "Yes with the description"
+                },
+                {
+                  "code": "N",
+                  "label": "No"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Anatomical lesion observed",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            },
+            {
+              "code": "anat_lesion_type",
+              "description": "Anatomical lesion observed classification",
+              "enumerations": [
+                {
+                  "code": "atrophy",
+                  "label": ""
+                },
+                {
+                  "code": "chir",
+                  "label": ""
+                },
+                {
+                  "code": "hippocampal_sclerosis",
+                  "label": ""
+                },
+                {
+                  "code": "infectious",
+                  "label": ""
+                },
+                {
+                  "code": "malformation",
+                  "label": ""
+                },
+                {
+                  "code": "tumoral",
+                  "label": ""
+                },
+                {
+                  "code": "vascular",
+                  "label": ""
+                },
+                {
+                  "code": "na",
+                  "label": "Not applicable"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Anatomical lesion classification",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            },
+            {
+              "code": "postsurgery_seizure_frequency",
+              "description": "Indicate if the patient had seizure after the surgery and give the frequency.",
+              "enumerations": [
+                {
+                  "code": "U",
+                  "label": "Unknown"
+                },
+                {
+                  "code": "0",
+                  "label": "No seizure"
+                },
+                {
+                  "code": "DM",
+                  "label": "Decreased>50%"
+                },
+                {
+                  "code": "DL",
+                  "label": "Decreased<50%"
+                },
+                {
+                  "code": "ID",
+                  "label": "Same frequency"
+                },
+                {
+                  "code": "IN",
+                  "label": "Increased"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Surgery post-operative seizure indicator",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            },
+            {
+              "code": "engel_score",
+              "description": "Give the score at the engel test.",
+              "enumerations": [
+                {
+                  "code": "U",
+                  "label": "Unknown"
+                },
+                {
+                  "code": "I",
+                  "label": "Free of disabling seizures"
+                },
+                {
+                  "code": "II",
+                  "label": "Rare disabling seizures"
+                },
+                {
+                  "code": "III",
+                  "label": "Worthwile improvement"
+                },
+                {
+                  "code": "IV",
+                  "label": "No worthwile improvement"
+                }
+              ],
+              "isCategorical": true,
+              "label": "Engel score",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "multinominal",
+              "units": ""
+            },
+            {
+              "code": "resection_date",
+              "description": "The resection date is calculated according to the SEEG date.",
+              "isCategorical": false,
+              "label": "Resection procedure date",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "date",
+              "units": ""
+            },
+            {
+              "code": "coagulation_date",
+              "description": "The coagulation date is calculated according to the SEEG date.",
+              "isCategorical": false,
+              "label": "Coagulation date",
+              "methodology": "",
+              "sql_type": "text",
+              "type": "date",
+              "units": ""
+            }
+          ]
+        }
+      ],
+      "label": "Treatmen_ intervention_data"
+    }
+  ],
+  "label": "Ftract",
+  "variables": [
+    {
+      "code": "dataset",
+      "description": "",
+      "enumerations": [
+      ],
+      "isCategorical": true,
+      "label": "Data set",
+      "methodology": "",
+      "sql_type": "text",
+      "type": "multinominal",
+      "units": ""
+    }
+  ]
+}

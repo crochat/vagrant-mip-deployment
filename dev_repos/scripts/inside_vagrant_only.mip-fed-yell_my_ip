@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+ret=1
+
+/vagrant/scripts/yell_my_ip $@
+ret=$?
+
+exit $ret

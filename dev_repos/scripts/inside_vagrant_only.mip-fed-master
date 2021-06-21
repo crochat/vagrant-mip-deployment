@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+BRANCH=""
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--branch)
+			BRANCH="$2"
+			shift
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+ret=1
+export DEBIAN_FRONTEND=noninteractive
+
+#git clone https://github.com/HBPMedical/mip-deployment
+#ret=$?
+#if [[ $ret -eq 0 ]]; then
+	#cd mip-deployment
+	#git checkout dev_mipscript
+	#ret=$?
+#fi
+
+#if [[ $ret -eq 0 ]]; then
+	#cd ..
+#fi
+
+ret=0
+if [[ $ret -eq 0 ]]; then
+	if [[ "$BRANCH" != "" ]]; then
+		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --branch "$BRANCH" install
+	else
+		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer install
+	fi
+	ret=$?
+fi
+
+if [[ $ret -eq 0 ]]; then
+	/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes configure all
+	ret=$?
+fi
+
+exit $ret

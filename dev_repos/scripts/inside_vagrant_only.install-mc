@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+ret=1
+export DEBIAN_FRONTEND=noninteractive
+
+git clone https://github.com/crochat/mc
+ret=$?
+if [[ $ret -eq 0 ]]; then
+	cd mc
+	./setup.sh
+	ret=$?
+fi
+
+if [[ $ret -eq 0 ]]; then
+	cd ..
+	rm -rf mc
+	ret=$?
+fi
+
+exit $ret

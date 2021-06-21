@@ -1,0 +1,277 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Using the exact same clouds.yaml file which can be used by the standard Python openstack client
+# i.e. openstack --os-cloud myopenstack-project1
+# In order to use non-standard authentication type (here, we use v3oidcpassword), this plugin will
+# use this client to ask for a token to be used then for all the rest of the actions.
+# Install this required client with: apt-get install python3-openstackclient
+#
+# I was inspired by https://github.com/dalees/vagrant-openstack-provider/tree/feature/auth_token
+# but I had to reimplement it because it had to go further, and right terms had to be used
+# (i.e. v3oidcpassword is auth_type, and password/token for identity parameters is auth_method)
+#
+# TODO: implement other non-standard authentication types in lib/keystone.rb
+# See https://docs.openstack.org/keystoneauth/latest/plugin-options.html
+#
+# DEPENDS: git clone https://github.com/crochat/rsshfs && sudo install rsshfs/rsshfs /usr/local/bin/ && rm -rf rsshfs
+
+VAGRANTFILE_API_VERSION = '2'
+DEBUG = false
+
+require 'vagrant-openstack-provider'
+require 'yaml'
+require 'erb'
+
+provisioning_report_file = '/root/provision'
+before_provision_trigger_script_filename = 'inside_vagrant_only.trigger.before_provision'
+
+def self.deep_merge!(tgt_hash, src_hash)
+  tgt_hash.merge!(src_hash) { |key, oldval, newval|
+    if oldval.kind_of?(Hash) && newval.kind_of?(Hash)
+      deep_merge!(oldval, newval)
+    else
+      newval
+    end
+  }
+end
+
+def self.find_os_config(filename)
+  paths = ['.', '~/.config/openstack', '/etc/openstack']
+  paths.each do |path|
+    file = File.expand_path File.join path, filename
+    if File.file? file
+      return file
+    end
+  end
+  return ''
+end
+
+def self.get_machine_var(params, vmname, var)
+  result = ''
+  if params['machine'].has_key? vmname
+    if params['machine'][vmname].has_key? var
+      result = params['machine'][vmname][var]
+    elsif params['global_parameters'].has_key? var
+      result = params['global_parameters'][var]
+    end
+  end
+
+  if result.instance_of? String
+    if result.casecmp('true') == 0
+      result = true
+    elsif result.casecmp('false') == 0
+      result = false
+    end
+  end
+
+  return result
+end
+
+params = begin
+  machines_file = 'vagrant-machines.yaml'
+  if File.file? File.expand_path File.join '.', machines_file
+    content = YAML.load(File.open(machines_file))
+
+    content
+  end
+rescue ArgumentError => e
+  puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
+end
+
+
+cloud = params['global_parameters']['os_cloud']
+generated_ssh_config_file = params['global_parameters']['generated_ssh_config_file']
+
+OSparams = begin
+  cloud_file = find_os_config 'clouds.yaml'
+  if File.file? cloud_file
+    content = YAML.load(File.open(cloud_file))['clouds'][cloud]
+
+    if content.key? 'cloud'
+      public_cloud = content['cloud']
+      public_cloud_file = find_os_config 'clouds-public.yaml'
+      if File.file? public_cloud_file
+        public_content = YAML.load(File.open(public_cloud_file))['public-clouds'][public_cloud]
+        deep_merge!(content, public_content)
+      end
+    end
+
+    secure_file = find_os_config 'secure.yaml'
+    if File.file? secure_file
+      secure_content = YAML.load(File.open(secure_file))['clouds']
+      if secure_content.key? cloud
+        deep_merge! content, secure_content[cloud]
+      end
+    end
+
+    content
+  end
+rescue ArgumentError => e
+  puts "Can't parse YAML cloud file (#{cloud_file}): #{e.message}"
+end
+
+#
+# This is quite the minimal configuration necessary
+# to start an OpenStack instance using Vagrant on
+# an OpenStack with Keystone v3 API, using
+# KeyCloak authentication with OpenID-Connect
+#
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.username = params['global_parameters']['ssh_username']
+  config.ssh.private_key_path = params['global_parameters']['ssh_private_key_file']
+
+  config.vm.provider :openstack do |os, ov|
+    os.identity_api_version                   = OSparams['identity_api_version'].to_s
+    os.openstack_auth_url                     = OSparams['auth']['auth_url']
+    os.identity_provider                      = OSparams['auth']['identity_provider']
+    os.discovery_endpoint                     = OSparams['auth']['discovery_endpoint']
+    os.auth_type                              = OSparams['auth_type']
+    os.protocol                               = OSparams['auth']['protocol']
+    os.client_id                              = OSparams['auth']['client_id']
+    os.client_secret                          = OSparams['auth']['client_secret']
+    os.project_name                           = OSparams['auth']['project_name']
+    os.project_domain_name                    = OSparams['auth']['project_domain_name']
+    os.username                               = OSparams['auth']['username']
+    os.password                               = OSparams['auth']['password']
+
+    os.keypair_name                           = params['global_parameters']['os_ssh_keypair_name']
+    os.security_groups                        = params['global_parameters']['os_security_groups']
+    if not os.security_groups.instance_of? Array
+      os.security_groups = [os.security_groups]
+    end
+
+    ov.nfs.functional = false
+  end
+
+  params['machine'].each do |vmname,info|
+    config.vm.define vmname do |s|
+      provisioning = params['provisioning'][info['machine_type']]
+      s.vm.provider :openstack do |os, override|
+        os.flavor                             = "#{params['machine_type'][info['machine_type']]['os_flavor_name']}"
+        os.security_groups                    = params['machine_type'][info['machine_type']]['os_security_groups']
+        if not os.security_groups.instance_of? Array
+          os.security_groups = [os.security_groups]
+        end
+        network                               = {
+          name: get_machine_var(params, vmname, 'os_network')
+        }
+        if info.has_key? 'ip'
+          network[:address] = "#{info['ip']}"
+        end
+        os.networks                           = [network]
+        floating_ip                           = get_machine_var params, vmname, 'os_floating_ip'
+        if floating_ip
+          os.floating_ip_pool                 = params['global_parameters']['os_public_net_name']
+          os.floating_ip_pool_always_allocate = params['global_parameters']['os_new_floating_ip_allocation']
+        end
+
+        os.volume_boot                        = {
+          image: "#{params['machine_type'][info['machine_type']]['os_image_name']}",
+          size: params['machine_type'][info['machine_type']]['os_image_size'].to_i,
+          delete_on_destroy: params['machine_type'][info['machine_type']]['os_delete_volume_on_destroy']
+        }
+
+        override.ssh.username                 = get_machine_var params, vmname, 'ssh_username'
+        override.ssh.private_key_path         = get_machine_var params, vmname, 'ssh_private_key_file'
+        os.keypair_name                       = get_machine_var params, vmname, 'os_ssh_keypair_name'
+      end
+
+      if info.has_key? 'hostname'
+        s.vm.provision "shell", name: 'hostname', inline: "hostnamectl set-hostname #{info['hostname']}"
+      end
+
+      if provisioning != ''
+        if provisioning.kind_of? Array and provisioning.length >= 1
+          provisioning_report = nil
+          hostname = nil
+          port = nil
+          inhost = false
+          if File.file? generated_ssh_config_file
+            File.foreach generated_ssh_config_file do |line|
+              if line.include? 'Host '
+                if line.include? "Host #{vmname}"
+                  inhost = true
+                else
+                  inhost = false
+                end
+              end
+              if inhost and line.include? 'HostName'
+                hostname = line.split(' ')[1]
+              elsif inhost and line.include? 'Port'
+                port = line.split(' ')[1]
+              end
+            end
+          elsif DEBUG
+            puts "Didn't find file #{generated_ssh_config_file}!"
+          end
+
+          if not hostname.nil? and not port.nil?
+            connection_test = `timeout #{params['global_parameters']['host_test_connection_timeout']} bash -c "</dev/tcp/#{hostname}/#{port}"; echo $?`
+            if connection_test.chomp == '0'
+              provisioning_report = `ssh -F #{generated_ssh_config_file} #{vmname} "if sudo bash -c '[[ -f #{provisioning_report_file} ]]'; then sudo cat #{provisioning_report_file}; else echo; fi"`
+            elsif DEBUG
+              puts "VM #{vmname} is not connected (#{hostname}:#{port})!"
+            end
+          elsif DEBUG
+            puts "Missing hostname or port for VM #{vmname}!"
+          end
+
+          reparams = begin
+            machines_file = 'vagrant-machines.yaml'
+            if File.file? File.expand_path File.join '.', machines_file
+              #content = YAML.load(File.open(machines_file))
+              content = YAML.load(ERB.new(File.read(machines_file)).result)
+
+              content
+            end
+          rescue ArgumentError => e
+            puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
+          end
+          reprovisioning = ''
+          if reparams != ''
+            reprovisioning = reparams['provisioning'][info['machine_type']]
+          end
+
+          provisioning.each_with_index do |provision, index|
+            reprovision = reprovisioning[index]
+            if provision.has_key? 'name'
+              if provisioning_report.nil? or not provisioning_report.include? provision['name']
+                if provision.has_key? 'type'
+                  args = nil
+                  if provision[provision['type']].has_key? 'args'
+                    args = reprovision[provision['type']]['args']
+                  end
+
+                  if provision[provision['type']].has_key? 'path'
+                    s.vm.provision provision['type'], preserve_order: true, path: File.expand_path(File.join(params['global_parameters']['scripts_path'], provision[provision['type']]['path'])), args: args
+                    s.vm.provision "shell", name: "confirm_#{provision['name']}", preserve_order: true, inline: "echo #{provision['name']} >> #{provisioning_report_file}"
+                  elsif provision[provision['type']].has_key? 'inline'
+                    s.vm.provision provision['type'], preserve_order: true, inline: File.expand_path(File.join(params['global_parameters']['scripts_path'], provision[provision['type']]['inline'])), args: args
+                    s.vm.provision "shell", name: "confirm_#{provision['name']}", preserve_order: true, inline: "echo #{provision['name']} >> #{provisioning_report_file}"
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+
+      s.trigger.before :provision do |trigger|
+        trigger.info = "Trigger: Before provision of #{vmname}!"
+        args = ['--vm', vmname, '--ssh-config', generated_ssh_config_file]
+        if get_machine_var(params, vmname, 'sshfs_allow_other')
+          args.append '--sshfs-allow-other'
+        end
+        trigger.run = {path: File.expand_path(File.join(params['global_parameters']['scripts_path'], before_provision_trigger_script_filename)), args: args}
+      end
+
+      s.trigger.before [:halt, :suspend, :reload, :destroy] do |trigger|
+        trigger.info = "Trigger: Before halt, suspend, reload, destroy of #{vmname}!"
+        trigger.run = {inline: "bash -c 'rsshfs -F #{generated_ssh_config_file} -q -u #{vmname}:/vagrant'"}
+      end
+    end
+  end
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+end

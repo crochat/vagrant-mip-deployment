@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+VM_PREFIX='cr'
+VM_SUBNET='10.86.201'
+
+case $1 in
+    start)
+        vagrant up --no-provision
+        vagrant provision
+        # Manually in ${VM_PREFIX}-local: (ssh mipadmin@${VM_SUBNET}.9)
+        # - Assign a floating IP
+        # - Prepare public DNS matching the floating
+        # sudo /vagrant/mip-deployment/mip --force --host <DNS_NAME> --with-keycloak-authentication --keycloak-url <DNS_NAME> --keycloak-protocol http configure all
+        # /vagrant/mip-deployment/mip restart
+        ;;
+    stop)
+        vagrant destroy
+        ;;
+esac

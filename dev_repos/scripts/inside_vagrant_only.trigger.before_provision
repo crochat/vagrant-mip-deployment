@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+
+USER=""
+VM=""
+SSH_CONFIG=""
+SSHFS_ALLOW_OTHER=0
+SSHFS_ARGS=()
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--vm)
+			VM="$2"
+			shift
+			shift
+			;;
+		--ssh-config)
+			SSH_CONFIG="$2"
+			shift
+			shift
+			;;
+		--sshfs-allow-other)
+			SSHFS_ALLOW_OTHER=1
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+if [[ "$VM" = "" || "$SSH_CONFIG" = "" ]]; then
+	echo "Error: Missing parameters!" >&2
+	exit 1
+fi
+
+if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
+	echo "Generating SSH configuration for VM $VM in file $SSH_CONFIG..."
+	vagrant_ssh_config=$(vagrant ssh-config $VM 2>/dev/null)
+	if [[ "$(echo $vagrant_ssh_config | head -1 | awk '{print $1}')" = "Host" ]]; then
+		echo "$vagrant_ssh_config" >> $SSH_CONFIG
+	else
+		echo "Error while trying to get SSH configuration for VM $VM!" >&2
+		exit 1
+	fi
+fi
+
+if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
+	echo "Error: Can't determine SSH configuration for VM $VM!" >&2
+	exit 1
+fi
+
+USER=$(cat $SSH_CONFIG | grep -A5 -E "^Host.*$VM" | grep "User " | awk '{print $2}')
+if [[ "$USER" = "" ]]; then
+	echo "Error: Can't determine user in SSH configuration!" >&2
+	exit 1
+fi
+
+SSHFS_ARGS+=("-F")
+SSHFS_ARGS+=("$SSH_CONFIG")
+SSHFS_ARGS+=("-o")
+SSHFS_ARGS+=("cache=no")
+if [[ $SSHFS_ALLOW_OTHER -eq 1 ]]; then
+	echo "Activating allow_other feature."
+	SSHFS_ARGS+=("-o")
+	SSHFS_ARGS+=("allow_other")
+else
+	echo "allow_other parameter is not set. This could make this script and some others to fail at some point!" >&2
+fi
+SSHFS_ARGS+=("-q")
+SSHFS_ARGS+=("-d")
+
+sshfs_mount=$(ssh -F $SSH_CONFIG $VM "mount | grep sshfs | cut -d' ' -f3")
+if [[ "$sshfs_mount" != "/vagrant" ]]; then
+	echo "Remote guest: /vagrant not mounted. Processing..."
+	ssh -t -F $SSH_CONFIG $VM << EOF >/dev/null
+#!/bin/bash
+
+SSHFS_ALLOW_OTHER=$SSHFS_ALLOW_OTHER
+if [[ ! -d /vagrant ]]; then
+	sudo mkdir -p /vagrant
+fi
+if [[ \$SSHFS_ALLOW_OTHER -eq 1 ]]; then
+	if [[ "\$(cat /etc/fuse.conf | grep -E '^user_allow_other')" = "" ]]; then
+		echo "Activating user_allow_other in /etc/fuse.conf! Remember to comment it once you wanna go into production!!"
+		if [[ "\$(cat /etc/fuse.conf | grep -E '^#user_allow_other')" != "" ]]; then
+			sudo sed --in-place 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf
+		else
+			sudo echo "user_allow_other" >> /etc/fuse.conf
+		fi
+	fi
+fi
+sudo chown $USER:$USER /vagrant
+exit \$?
+EOF
+	ret=$?
+	if [[ $ret -ne 0 ]]; then
+		echo "Remote guest: Failed to prepare mount point!" >&2
+		exit 1
+	fi
+
+	retries=10
+	i=1
+	while [[ $i -le $retries ]]; do
+		echo "Remote guest: Checking and installing sshfs, if required..."
+		ssh -t -F $SSH_CONFIG $VM << EOF >/dev/null
+#!/bin/bash
+ret=0
+export DEBIAN_FRONTEND=noninteractive
+pid=0
+ppid=0
+if [[ "\$(command -v sshfs)" = "" ]]; then
+	sudo apt-get update
+	sudo apt-get install -y --no-install-recommends sshfs
+	pid=\$!
+fi
+
+maxtries=40
+try=1
+while [[ "\$(command -v sshfs)" = "" && \$try -le \$maxtries ]]; do
+	sleep 1
+	echo "wait \$try..."
+	try=\$((try + 1))
+done
+
+if [[ \$pid -ne 0 ]]; then
+	echo "pid=\$pid"
+	ppid=\$(ps -o ppid= \$pid)
+	echo "ppid=\$ppid"
+	if [[ "\$(sudo kill -15 \$pid)" != "" ]]; then
+		echo "Can't kill the process \$pid nicely. Trying harder..." >2
+		sudo kill -9 \$pid
+	fi
+	if [[ "\$(sudo kill -0 \$pid)" = "" && \$ppid -ne 0 ]]; then
+		echo "Still can't kill the process! Trying suicide..." >2
+		kill -15 \$ppid
+	fi
+fi
+
+exit \$ret
+EOF
+		ret=$?
+		if [[ $ret -eq 0 ]]; then
+			sshfs_check=$(ssh -F $SSH_CONFIG $VM command -v sshfs)
+			if [[ "$sshfs_check" != "" ]]; then
+				echo "Remote guest: sshfs ready."
+				break
+			else
+				ret=1
+			fi
+		fi
+
+		if [[ $ret -ne 0 ]]; then
+			echo "Remote guest: Failed to install sshfs! Retry $i/$((retries))..." >&2
+			i=$((i + 1))
+		fi
+	done
+
+	if [[ $ret -eq 0 ]]; then
+		echo "Running rsshfs..."
+		rsshfs ${SSHFS_ARGS[@]} "." "$VM:/vagrant"
+		ret=$?
+		if [[ $ret -eq 0 ]]; then
+			sleep 2
+			mount_check=$(ssh -F $SSH_CONFIG $VM mount | grep sshfs | grep /vagrant)
+			if [[ "$mount_check" != "" ]]; then
+				echo "done"
+			else
+				echo "Error: mount point /vagrant not mounted!" >&2
+				exit 1
+			fi
+		else
+			echo "Error while running: rsshfs ${SSHFS_ARGS[@]} . $VM:/vagrant!" >&2
+			exit 1
+		fi
+	else
+		echo "Remote guest: Failed to prepare sshfs!" >&2
+		exit 1
+	fi
+fi
+
+exit 0

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+VM_PREFIX='cr'
+VM_SUBNET='10.86.201'
+FEDERATION='mipfed1'
+
+case $1 in
+    start)
+        vagrant up --parallel /wk/
+        # ssh mipadmin@${VM_SUBNET}.13 (wk1), ${VM_SUBNET}.14 (wk2)
+
+        vagrant up --no-provision ${VM_PREFIX}-ms
+        vagrant provision ${VM_PREFIX}-ms
+        # ssh mipadmin@${VM_SUBNET}.11
+
+        vagrant up --no-provision ${VM_PREFIX}-ui
+        vagrant provision ${VM_PREFIX}-ui
+        # Manually in nc-ui: (ssh mipadmin@${VM_SUBNET}.12)
+        # - Assign a floating IP
+        # - Prepare public DNS matching the floating
+        # sudo /vagrant/mip-deployment/mip --node-type ui --force --host <DNS_NAME> configure host
+        # /vagrant/mip-deployment/mip restart
+
+        vagrant up --no-provision ${VM_PREFIX}-pusher
+        vagrant provision ${VM_PREFIX}-pusher
+
+        # Manually in nc-pusher: (ssh mipadmin@${VM_SUBNET}.10)
+        # sudo /vagrant/mip-deployment/mip --pusher --federation ${FEDERATION} configure pusher
+        ;;
+    stop)
+        vagrant destroy --parallel
+        ;;
+esac

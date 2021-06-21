@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+SCRIPT="$1"
+shift
+
+user=""
+group=""
+mount_point=""
+
+first_dir="/$(echo $SCRIPT | awk -F '/' '{print $2}')"
+
+mount_info=$(mount | grep sshfs | grep "$first_dir")
+if [[ "$mount_info" != "" ]]; then
+	mount_point=$(echo $mount_info | awk '{print $3}')
+	echo "$SCRIPT is on sshfs mount point: $mount_point"
+
+	mount_info=$(echo $mount_info | awk '{print $NF}' | cut -c2- | rev | cut -c2- | rev)
+	if [[ "$mount_info" != "" ]]; then
+		uid=$(echo $mount_info | tr ',' '\n' | awk -F '=' '/user_id/ {print $NF}')
+		gid=$(echo $mount_info | tr ',' '\n' | awk -F '=' '/group_id/ {print $NF}')
+
+		if [[ "$uid" != "" ]]; then
+			echo "$mount_point owner user id: $uid"
+			user=$(id -u -n $uid)
+			echo "$mount_point owner user name: $user"
+		fi
+		if [[ "$gid" != "" ]]; then
+			echo "$mount_point owner group id: $gid"
+			group=$(id -g -n $gid)
+			echo "$mount_point owner group name: $group"
+		fi
+	fi
+else
+	echo "$SCRIPT is not on sshfs!"
+fi
+
+if [[ "$mount_point" != "" ]]; then
+	if [[ "$user" = "" || "$group" = "" ]]; then
+		echo "Can't find owner for the mount point $mount_point!" >&2
+		exit 1
+	fi
+fi
+
+result=1
+if [[ "$mount_point" != "" ]]; then
+	sudo -u $user -g $group bash -c "$SCRIPT $@"
+	result=$?
+else
+	$SCRIPT $@
+	result=$?
+fi
+
+exit $result

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+hosts_file=hosts.dat
+
+my_host_type="host"
+dev_path=""
+my_hostname=$(hostname)
+my_routable_dev=$(ip r | awk '/^default/ {print $5}')
+my_routable_ip=$(ip address show $my_routable_dev | awk '/^[ \t]+inet / {print $2}' | cut -d/ -f1)
+my_other_dev=$(ip l | grep -A2 "^[0-9]: $my_routable_dev:" | tail -1 | awk '{print $2}' | rev | cut -c2- | rev)
+if [[ "$my_other_dev" = "" || "$(echo $my_other_dev | grep 'docker\|vboxnet\|vmnet')" != "" ]]; then
+    my_other_dev=$my_routable_dev
+fi
+my_other_ip=$(ip address show $my_other_dev | awk '/^[ \t]+inet / {print $2}' | cut -d/ -f1)
+if [[ "$my_other_ip" = "" ]]; then
+    my_other_dev=$my_routable_dev
+    my_other_ip=$my_routable_ip
+fi
+
+if [[ -d /sys/block/vda ]]; then
+    dev_path=/sys/block/vda
+elif [[ -d /sys/block/sda ]]; then
+    dev_path=/sys/block/sda
+fi
+if [[ "$dev_path" != "" ]]; then
+    dev_path+="/device/vendor"
+    if [[ "$(cat $dev_path | awk '{print $1}')" = "VBOX" ]]; then
+        my_host_type="guest"
+    fi
+fi
+
+if [[ "$my_host_type" = "host" ]]; then
+    vbox_dev=$(ip l | awk '{if($2 ~ "vbox") print $2}' | rev | cut -c2- | rev | head -1)
+    if [[ "$vbox_dev" != "" ]]; then
+        vbox_ip=$(ip address show $vbox_dev | awk '/^[ \t]+inet / {print $2}' | cut -d/ -f1)
+        if [[ "$vbox_ip" != "" ]]; then
+            my_other_dev=$vbox_dev
+            my_other_ip=$vbox_ip
+        fi
+    fi
+fi
+
+if [[ "$my_host_type" = "guest" ]]; then
+    hosts_file="/vagrant/$hosts_file"
+fi
+
+if [[ ! -f $hosts_file ]]; then
+    touch $hosts_file
+fi
+
+if [[ "$(grep $my_hostname $hosts_file)" = "" ]]; then
+    echo "$my_host_type $my_hostname $my_other_ip" >> $hosts_file
+fi
