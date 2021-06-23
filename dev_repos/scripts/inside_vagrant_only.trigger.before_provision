@@ -31,9 +31,10 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
+ret=1
 if [[ "$VM" = "" || "$SSH_CONFIG" = "" ]]; then
 	echo "Error: Missing parameters!" >&2
-	exit 1
+	exit $ret
 fi
 
 if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
@@ -43,19 +44,19 @@ if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
 		echo "$vagrant_ssh_config" >> $SSH_CONFIG
 	else
 		echo "Error while trying to get SSH configuration for VM $VM!" >&2
-		exit 1
+		exit $ret
 	fi
 fi
 
 if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
 	echo "Error: Can't determine SSH configuration for VM $VM!" >&2
-	exit 1
+	exit $ret
 fi
 
 USER=$(cat $SSH_CONFIG | grep -A5 -E "^Host.*$VM" | grep "User " | awk '{print $2}')
 if [[ "$USER" = "" ]]; then
 	echo "Error: Can't determine user in SSH configuration!" >&2
-	exit 1
+	exit $ret
 fi
 
 SSHFS_ARGS+=("-F")
@@ -159,26 +160,26 @@ EOF
 	done
 
 	if [[ $ret -eq 0 ]]; then
+		ret=1
 		echo "Running rsshfs..."
 		rsshfs ${SSHFS_ARGS[@]} "." "$VM:/vagrant"
 		ret=$?
 		if [[ $ret -eq 0 ]]; then
+			ret=1
 			sleep 2
 			mount_check=$(ssh -F $SSH_CONFIG $VM mount | grep sshfs | grep /vagrant)
 			if [[ "$mount_check" != "" ]]; then
 				echo "done"
+				ret=0
 			else
 				echo "Error: mount point /vagrant not mounted!" >&2
-				exit 1
 			fi
 		else
 			echo "Error while running: rsshfs ${SSHFS_ARGS[@]} . $VM:/vagrant!" >&2
-			exit 1
 		fi
 	else
 		echo "Remote guest: Failed to prepare sshfs!" >&2
-		exit 1
 	fi
 fi
 
-exit 0
+exit $ret
