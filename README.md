@@ -22,9 +22,7 @@ This is the structure that you can use to deploy MIP development environments (o
 
 ## Pre-requirements preparation
 
-* Install required tools
-
-** rsshfs
+* Install rsshfs
 
 ```
 git clone https://github.com/crochat/rsshfs
@@ -38,7 +36,7 @@ sudo install rsshfs/rsshfs /usr/local/bin
 rm -rf rsshfs
 ```
 
-** OpenStack
+* Install OpenStack client
 
 ```
 sudo apt-get update --fix-missing
@@ -48,7 +46,7 @@ sudo apt-get update --fix-missing
 sudo apt-get install -y --no-install-recommends git python3-nova python3-glance python3-swiftclient python3-keystone python3-neutron python3-cinder python3-ceilometer python3-heat lsb-core curl ruby gem gcc g++
 ```
 
-** OpenStack configuration
+* Configure OpenStack client
 
 You can git clone https://github.com/crochat/cscs-openstack-config and follow the README to prepare the configuration.
 If you don't work on the CSCS OpenStack environment, you'll also have to adapt /etc/openstack/public-cloud.yaml configuration file.
@@ -66,7 +64,7 @@ If you cloned cscs-openstack-config, you can remove it
 rm -rf cscs-openstack-config
 ```
 
-** Vagrant
+* Install Vagrant
 
 ```
 git clone https://github.com/crochat/vagrant-installer
