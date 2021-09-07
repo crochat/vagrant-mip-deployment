@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+MIP_LINK=""
+EXTERNAL_MIP_PROTOCOL=""
 PUBLIC_MIP_PROTOCOL=""
 PUBLIC_MIP_HOST=""
 KEYCLOAK_PROTOCOL=""
@@ -9,6 +11,16 @@ BRANCH=""
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
+		--mip-link)
+			MIP_LINK="$2"
+			shift
+			shift
+			;;
+		--external-mip-protocol)
+			EXTERNAL_MIP_PROTOCOL="$2"
+			shift
+			shift
+			;;
 		--public-mip-protocol)
 			PUBLIC_MIP_PROTOCOL="$2"
 			shift
@@ -43,7 +55,7 @@ done
 set -- "${POSITIONAL[@]}"
 
 ret=1
-if [[ "$PUBLIC_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_HOST" = "" || "$KEYCLOAK_PROTOCOL" = "" || "$KEYCLOAK_URL" = "" ]]; then
+if [[ "$MIP_LINK" = "" || "$EXTERNAL_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_HOST" = "" || "$KEYCLOAK_PROTOCOL" = "" || "$KEYCLOAK_URL" = "" ]]; then
 	exit $ret
 fi
 
@@ -74,7 +86,7 @@ fi
 if [[ $ret -eq 0 ]]; then
 	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
 	#/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --host $(awk '/^host/ {if(NF == 4) print $4; else print $3}' /vagrant/hosts.dat):$(grep -E -A10 "^[ \t]+config.vm.define \"ui\"" /vagrant/Vagrantfile | grep forwarded_port | awk -F 'host:' '{print $2}' | awk -F ',' '{print $1}' | awk '{print $1}') --exareme-ip $(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat) --with-keycloak-authentication configure all
-	/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --exareme-ip "$(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat)" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
+	/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --link "$MIP_LINK" --ext-protocol "$EXTERNAL_MIP_PROTOCOL" --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --exareme-ip "$(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat)" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
 	ret=$?
 fi
 

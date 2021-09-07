@@ -1,7 +1,9 @@
 global_parameters:
   branch: &branch master
   federation: &federation mipfed1
-  public_mip_protocol: &public_mip_protocol https
+  mip_link: &mip_link direct
+  external_mip_protocol: &external_mip_protocol https
+  public_mip_protocol: &public_mip_protocol http
   public_mip_host: &public_mip_host <VM_PREFIX>-local1.<DOMAIN_NAME>
   keycloak_protocol: &keycloak_protocol https
   keycloak_url: &keycloak_url <KEYCLOAK_URL>
@@ -45,7 +47,7 @@ provisioning:
     - {name: mip-import-cde, type: shell, shell: {path: inside_vagrant_only.mip-import-cde, args: [--federation, *federation]}}
   ui:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
+    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
@@ -56,7 +58,7 @@ provisioning:
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
   local:
-    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
+    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}

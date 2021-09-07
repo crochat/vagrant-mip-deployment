@@ -180,6 +180,8 @@ EOF
 	else
 		echo "Remote guest: Failed to prepare sshfs!" >&2
 	fi
+else
+	ret=0
 fi
 
 exit $ret
