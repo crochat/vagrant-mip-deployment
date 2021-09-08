@@ -85,8 +85,19 @@ fi
 
 if [[ $ret -eq 0 ]]; then
 	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
+	echo "Configuring the MIP..."
 	/vagrant/dev_repos/mip-deployment/mip --quiet --yes --link "$MIP_LINK" --ext-protocol "$EXTERNAL_MIP_PROTOCOL" --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
 	ret=$?
+fi
+
+if [[ $ret -eq 0 ]]; then
+	echo "Stopping the MIP..."
+	/vagrant/dev_repos/mip-deployment/mip --quiet --yes stop
+	ret=$?
+	if [[ $ret -ne 0 ]]; then
+		echo "Exit code $ret. Forcing to 0."
+		ret=0
+	fi
 fi
 
 if [[ $ret -eq 0 ]]; then
@@ -114,8 +125,13 @@ if [[ $ret -eq 0 ]]; then
 fi
 
 if [[ $ret -eq 0 ]]; then
-	/vagrant/dev_repos/mip-deployment/mip --yes start
+	echo "Starting the MIP..."
+	/vagrant/dev_repos/mip-deployment/mip --quiet --yes start
 	ret=$?
+	if [[ $ret -ne 0 ]]; then
+		echo "Exit code $ret. Forcing to 0."
+		ret=0
+	fi
 fi
 
 exit $ret

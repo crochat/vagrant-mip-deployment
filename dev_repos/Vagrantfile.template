@@ -76,7 +76,7 @@ params = begin
     content
   end
 rescue ArgumentError => e
-  puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
+  STDERR.puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
 end
 
 
@@ -108,7 +108,7 @@ OSparams = begin
     content
   end
 rescue ArgumentError => e
-  puts "Can't parse YAML cloud file (#{cloud_file}): #{e.message}"
+  STDERR.puts "Can't parse YAML cloud file (#{cloud_file}): #{e.message}"
 end
 
 #
@@ -203,7 +203,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
               end
             end
           elsif DEBUG
-            puts "Didn't find file #{generated_ssh_config_file}!"
+            STDERR.puts "Didn't find file #{generated_ssh_config_file}!"
           end
 
           if not hostname.nil? and not port.nil?
@@ -211,10 +211,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             if connection_test.chomp == '0'
               provisioning_report = `ssh -F #{generated_ssh_config_file} #{vmname} "if sudo bash -c '[[ -f #{provisioning_report_file} ]]'; then sudo cat #{provisioning_report_file}; else echo; fi"`
             elsif DEBUG
-              puts "VM #{vmname} is not connected (#{hostname}:#{port})!"
+              STDERR.puts "VM #{vmname} is not connected (#{hostname}:#{port})!"
             end
           elsif DEBUG
-            puts "Missing hostname or port for VM #{vmname}!"
+            STDERR.puts "Missing hostname or port for VM #{vmname}!"
           end
 
           reparams = begin
@@ -226,7 +226,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
               content
             end
           rescue ArgumentError => e
-            puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
+            STDERR.puts "Can't parse YAML configuration file (#{machines_file}): #{e.message}"
           end
           reprovisioning = ''
           if reparams != ''

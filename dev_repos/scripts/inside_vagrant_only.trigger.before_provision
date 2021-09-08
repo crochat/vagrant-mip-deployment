@@ -161,7 +161,7 @@ EOF
 
 	if [[ $ret -eq 0 ]]; then
 		ret=1
-		echo "Running rsshfs..."
+		echo "Running rsshfs ${SSHFS_ARGS[@]} \".\" \"$VM:/vagrant\""
 		rsshfs ${SSHFS_ARGS[@]} "." "$VM:/vagrant"
 		ret=$?
 		if [[ $ret -eq 0 ]]; then
