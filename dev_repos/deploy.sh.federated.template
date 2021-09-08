@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
 
-VM_PREFIX='cr'
-VM_SUBNET='10.86.201'
-FEDERATION='mipfed1'
+VM_PREFIX='myfederation'
+FEDERATION='fed1'
 
 case $1 in
     start)
         vagrant up --parallel /wk/
-        # ssh mipadmin@${VM_SUBNET}.13 (wk1), ${VM_SUBNET}.14 (wk2)
+        # vagrant ssh mipadmin@${VM_PREFIX}-${FEDERATION}-wk1 (wk1), vagrant ssh mipadmin@${VM_PREFIX}-${FEDERATION}-wk2 (wk2)
 
-        vagrant up --no-provision ${VM_PREFIX}-ms
-        vagrant provision ${VM_PREFIX}-ms
-        # ssh mipadmin@${VM_SUBNET}.11
+        vagrant up --no-provision ${VM_PREFIX}-${FEDERATION}-ms
+        vagrant provision ${VM_PREFIX}-${FEDERATION}-ms
+        # vagrant ssh mipadmin@${VM_PREFIX}-${FEDERATION}-ms
 
-        vagrant up --no-provision ${VM_PREFIX}-ui
-        vagrant provision ${VM_PREFIX}-ui
-        # Manually in nc-ui: (ssh mipadmin@${VM_SUBNET}.12)
+        vagrant up --no-provision ${VM_PREFIX}-${FEDERATION}-ui
+        vagrant provision ${VM_PREFIX}-${FEDERATION}-ui
+        # Manually in nc-ui: vagrant ssh mipadmin@${VM_PREFIX}-${FEDERATION}-ui
         # - Assign a floating IP
         # - Prepare public DNS matching the floating
         # sudo /vagrant/mip-deployment/mip --node-type ui --force --host <DNS_NAME> configure host
         # /vagrant/mip-deployment/mip restart
 
-        vagrant up --no-provision ${VM_PREFIX}-pusher
-        vagrant provision ${VM_PREFIX}-pusher
+        vagrant up --no-provision ${VM_PREFIX}-${FEDERATION}-pusher
+        vagrant provision ${VM_PREFIX}-${FEDERATION}-pusher
 
-        # Manually in nc-pusher: (ssh mipadmin@${VM_SUBNET}.10)
+        # Manually in nc-pusher: vagrant ssh mipadmin@${VM_PREFIX}-${FEDERATION}-pusher
         # sudo /vagrant/mip-deployment/mip --pusher --federation ${FEDERATION} configure pusher
         ;;
     stop)
