@@ -1,13 +1,11 @@
 global_parameters:
   branch: &branch master
-  federation: &federation <FEDERATION>                               # Used in federated MIP only
-  exareme_ip: &exareme_ip <EXAREME_IP>                               # Used in federated MIP only. IP of the master node, by which the UI is supposed to contact exareme_master
   mip_link: &mip_link direct                                         # The way the MIP is reached, "direct" or "proxied"
   external_mip_protocol: &external_mip_protocol https                # The protocol (http or https) used on the external reverse proxy
   public_mip_protocol: &public_mip_protocol https                    # The portal_frontend protocol (http or https). Usually http when proxied and https when direct.
   public_mip_host: &public_mip_host <VM_PREFIX>-ui.<DOMAIN_NAME>     # The public FQDN where we reach the MIP if direct, or the private FQDN or IP where the REVERSE PROXY reaches the MIP internally
-  keycloak_protocol: &keycloak_protocol https                        # The protocol (http or https) used to contact keycloak. Local MIP: usually https for direct, http for proxied. Federated: usually https for external keycloak.
-  keycloak_url: &keycloak_url <KEYCLOAK_URL>
+  keycloak_protocol: &keycloak_protocol https                        # The protocol (http or https) used to contact keycloak. For a local MIP, it's usually https for direct, and http for proxied.
+  keycloak_url: &keycloak_url <KEYCLOAK_URL>                         # The public FQDN used to join keycloak.
 
 
 
@@ -32,32 +30,6 @@ global_parameters:
   os_delete_volume_on_destroy: &os_delete_volume_on_destroy true     # OpenStack: A volume is automatically created to store the root filesystem of the VM. If true, this volume will be automatically destroyed upon destroy of VM. This is meant to be used in machine_type description.
 
 provisioning:
-  worker:
-    - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip, args: <%= defined?(hostname) %>}}
-    - {name: mip-fed-worker, type: shell, shell: {path: inside_vagrant_only.mip-fed-worker, args: [--branch, *branch]}}
-    - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
-    - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
-    - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
-    - {name: mip-import-data, type: shell, shell: {path: inside_vagrant_only.mip-import-data, args: [--federation, *federation]}}
-  master:
-    - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-master, type: shell, shell: {path: inside_vagrant_only.mip-fed-master, args: [--branch, *branch]}}
-    - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
-    - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
-    - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
-    - {name: mip-import-cde, type: shell, shell: {path: inside_vagrant_only.mip-import-cde, args: [--federation, *federation]}}
-  ui:
-    - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--exareme-ip, *exareme_ip, --mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
-    - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
-    - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
-    - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
-  pusher:
-    - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-pusher, type: shell, shell: {path: inside_vagrant_only.mip-fed-pusher, args: [--federation, *federation, --branch, *branch]}}
-    - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
-    - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
-    - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
   local:
     - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
@@ -65,34 +37,6 @@ provisioning:
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
 
 machine_type:
-  worker:
-    os_flavor_name: *os_flavor_name
-    os_security_groups: *os_security_groups
-    os_image_name: *os_image_name
-    os_image_size: *os_image_size
-    os_delete_volume_on_destroy: *os_delete_volume_on_destroy
-    provisioning: worker
-  master:
-    os_flavor_name: *os_flavor_name
-    os_security_groups: *os_security_groups
-    os_image_name: *os_image_name
-    os_image_size: *os_image_size
-    os_delete_volume_on_destroy: *os_delete_volume_on_destroy
-    provisioning: master
-  ui:
-    os_flavor_name: *os_flavor_name
-    os_security_groups: *os_security_groups
-    os_image_name: *os_image_name
-    os_image_size: *os_image_size
-    os_delete_volume_on_destroy: *os_delete_volume_on_destroy
-    provisioning: ui
-  pusher:
-    os_flavor_name: m1.small2
-    os_security_groups: *os_security_groups
-    os_image_name: *os_image_name
-    os_image_size: *os_image_size
-    os_delete_volume_on_destroy: *os_delete_volume_on_destroy
-    provisioning: pusher
   local:
     os_flavor_name: *os_flavor_name
     os_security_groups: *os_security_groups
@@ -102,26 +46,10 @@ machine_type:
     provisioning: local
 
 machine:
-  <VM_PREFIX>-<FEDERATION>-wk1:
+  <VM_PREFIX>-local1:
     ip: <VM_IP_ADDRESS>                                                 # If not defined, the IP will be dynamically assigned (if subnet is configured with DHCP). This may be annoying regarding the vagrant-ssh.config file which will never be up-to-date and will regularly have to be deleted.
     #os_floating_ip: true
     #os_ssh_keypair_name: mipadmin
     #ssh_private_key_file: ~/.ssh/id_rsa.mipadmin
     hostname: <VM_HOSTNAME>
-    machine_type: worker
-  <VM_PREFIX>-<FEDERATION>-wk2:
-    ip: <VM_IP_ADDRESS>
-    hostname: <VM_HOSTNAME>
-    machine_type: worker
-  <VM_PREFIX>-<FEDERATION>-ms:
-    ip: *exareme_ip
-    hostname: <VM_HOSTNAME>
-    machine_type: master
-  <VM_PREFIX>-<FEDERATION>-ui:
-    ip: <VM_IP_ADDRESS>
-    hostname: <VM_HOSTNAME>
-    machine_type: ui
-  <VM_PREFIX>-<FEDERATION>-pusher:
-    ip: <VM_IP_ADDRESS>
-    hostname: <VM_HOSTNAME>
-    machine_type: pusher
+    machine_type: local

@@ -110,8 +110,8 @@ Once ready, you can mount the dev_repos folder here by running:
 
 The dev_repos folder should appear.
 
-Then, you can copy (and edit) the corresponding deploy.sh template file from dev_repos to your federated/fedX or local/localX folder as deploy.sh.
-At last, you can also copy (and edit) the vagrant-machines.yaml.template from dev_repos to your federated/fedX or local/localX folder as vagrant-machines.yaml.
+Then, you can copy (and edit) the corresponding (local/federated) deploy.sh template file from dev_repos to your federated/fedX or local/localX folder as deploy.sh.
+At last, you can also copy (and edit) the corresponding (local/federated) vagrant-machines.yaml template from dev_repos to your federated/fedX or local/localX folder as vagrant-machines.yaml.
 
 After these steps, if you followed everything and did all the required configurations well, you should be able to run:
 
