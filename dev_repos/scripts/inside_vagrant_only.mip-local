@@ -61,23 +61,13 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-#git clone https://github.com/HBPMedical/mip-deployment
-#ret=$?
-#if [[ $ret -eq 0 ]]; then
-	#cd mip-deployment
-	#git checkout dev_mipscript
-	#ret=$?
-#fi
-
-#if [[ $ret -eq 0 ]]; then
-	#cd ..
-#fi
-
 ret=0
 if [[ $ret -eq 0 ]]; then
 	if [[ "$BRANCH" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --branch \"$BRANCH\" --no-run --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --branch "$BRANCH" --no-run --keep-installer install
 	else
+		echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --no-run --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --quiet --yes --no-run --keep-installer install
 	fi
 	ret=$?
@@ -86,12 +76,14 @@ fi
 if [[ $ret -eq 0 ]]; then
 	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
 	echo "Configuring the MIP..."
+	echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --link \"$MIP_LINK\" --ext-protocol \"$EXTERNAL_MIP_PROTOCOL\" --protocol \"$PUBLIC_MIP_PROTOCOL\" --host \"$PUBLIC_MIP_HOST\" --with-keycloak-authentication --keycloak-protocol \"$KEYCLOAK_PROTOCOL\" --keycloak-url \"$KEYCLOAK_URL\" configure all"
 	/vagrant/dev_repos/mip-deployment/mip --quiet --yes --link "$MIP_LINK" --ext-protocol "$EXTERNAL_MIP_PROTOCOL" --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
 	echo "Stopping the MIP..."
+	echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes stop"
 	/vagrant/dev_repos/mip-deployment/mip --quiet --yes stop
 	ret=$?
 	if [[ $ret -ne 0 ]]; then
@@ -102,30 +94,36 @@ fi
 
 if [[ $ret -eq 0 ]]; then
 	if [[ -d /vagrant/data ]]; then
+		echo "rm -rf /opt/mip-deployment/data"
 		rm -rf /opt/mip-deployment/data
 		ret=$?
 	else
+		echo "mv /opt/mip-deployment/data /vagrant/"
 		mv /opt/mip-deployment/data /vagrant/
 		ret=$?
 	fi
 
 	if [[ $ret -eq 0 ]]; then
+		echo "ln -s /vagrant/data /opt/mip-deployment/"
 		ln -s /vagrant/data /opt/mip-deployment/
 	fi
 fi
 
 if [[ $ret -eq 0 ]]; then
+	echo "/vagrant/dev_repos/mip-deployment/mip data consolidate"
 	/vagrant/dev_repos/mip-deployment/mip data consolidate
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
+	echo "/vagrant/dev_repos/mip-deployment/mip data compile"
 	/vagrant/dev_repos/mip-deployment/mip data compile
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
 	echo "Starting the MIP..."
+	echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes start"
 	/vagrant/dev_repos/mip-deployment/mip --quiet --yes start
 	ret=$?
 	if [[ $ret -ne 0 ]]; then

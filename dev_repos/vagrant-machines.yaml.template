@@ -1,11 +1,12 @@
 global_parameters:
   branch: &branch master
-  federation: &federation mipfed1
-  mip_link: &mip_link direct
-  external_mip_protocol: &external_mip_protocol https
-  public_mip_protocol: &public_mip_protocol http
-  public_mip_host: &public_mip_host <VM_PREFIX>-local1.<DOMAIN_NAME>
-  keycloak_protocol: &keycloak_protocol https
+  federation: &federation <FEDERATION>                               # Used in federated MIP only
+  exareme_ip: &exareme_ip <EXAREME_IP>                               # Used in federated MIP only. IP of the master node, by which the UI is supposed to contact exareme_master
+  mip_link: &mip_link direct                                         # The way the MIP is reached, "direct" or "proxied"
+  external_mip_protocol: &external_mip_protocol https                # The protocol (http or https) used on the external reverse proxy
+  public_mip_protocol: &public_mip_protocol https                    # The portal_frontend protocol (http or https). Usually http when proxied and https when direct.
+  public_mip_host: &public_mip_host <VM_PREFIX>-ui.<DOMAIN_NAME>     # The public FQDN where we reach the MIP if direct, or the private FQDN or IP where the REVERSE PROXY reaches the MIP internally
+  keycloak_protocol: &keycloak_protocol https                        # The protocol (http or https) used to contact keycloak. Local MIP: usually https for direct, http for proxied. Federated: usually https for external keycloak.
   keycloak_url: &keycloak_url <KEYCLOAK_URL>
 
 
@@ -47,7 +48,7 @@ provisioning:
     - {name: mip-import-cde, type: shell, shell: {path: inside_vagrant_only.mip-import-cde, args: [--federation, *federation]}}
   ui:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
+    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--exareme-ip, *exareme_ip, --mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
@@ -101,30 +102,26 @@ machine_type:
     provisioning: local
 
 machine:
-  <VM_NAME>:
+  <VM_PREFIX>-<FEDERATION>-wk1:
     ip: <VM_IP_ADDRESS>                                                 # If not defined, the IP will be dynamically assigned (if subnet is configured with DHCP). This may be annoying regarding the vagrant-ssh.config file which will never be up-to-date and will regularly have to be deleted.
     #os_floating_ip: true
     #os_ssh_keypair_name: mipadmin
     #ssh_private_key_file: ~/.ssh/id_rsa.mipadmin
     hostname: <VM_HOSTNAME>
-    machine_type: local
-  <VM_NAME>:
+    machine_type: worker
+  <VM_PREFIX>-<FEDERATION>-wk2:
     ip: <VM_IP_ADDRESS>
     hostname: <VM_HOSTNAME>
     machine_type: worker
-  <VM_NAME>:
-    ip: <VM_IP_ADDRESS>
-    hostname: <VM_HOSTNAME>
-    machine_type: worker
-  <VM_NAME>:
-    ip: <VM_IP_ADDRESS>
+  <VM_PREFIX>-<FEDERATION>-ms:
+    ip: *exareme_ip
     hostname: <VM_HOSTNAME>
     machine_type: master
-  <VM_NAME>:
+  <VM_PREFIX>-<FEDERATION>-ui:
     ip: <VM_IP_ADDRESS>
     hostname: <VM_HOSTNAME>
     machine_type: ui
-  <VM_NAME>:
+  <VM_PREFIX>-<FEDERATION>-pusher:
     ip: <VM_IP_ADDRESS>
     hostname: <VM_HOSTNAME>
     machine_type: pusher

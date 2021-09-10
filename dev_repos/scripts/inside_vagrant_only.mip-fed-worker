@@ -21,28 +21,20 @@ set -- "${POSITIONAL[@]}"
 ret=1
 export DEBIAN_FRONTEND=noninteractive
 
-#git clone https://github.com/HBPMedical/mip-deployment
-#ret=$?
-#if [[ $ret -eq 0 ]]; then
-	#cd mip-deployment
-	#git checkout dev_mipscript
-#fi
-
-#if [[ $ret -eq 0 ]]; then
-	#cd ..
-#fi
-
 ret=0
 if [[ $ret -eq 0 ]]; then
 	if [[ "$BRANCH" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes --keep-installer --force-install-unstable --branch \"$BRANCH\" install"
 		/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes --keep-installer --force-install-unstable --branch "$BRANCH" install
 	else
+		echo "/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes --keep-installer install
 	fi
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
+	echo "/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes configure all"
 	/vagrant/dev_repos/mip-deployment/mip --node-type wk --quiet --yes configure all
 	ret=$?
 fi

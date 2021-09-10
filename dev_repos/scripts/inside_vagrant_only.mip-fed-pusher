@@ -31,25 +31,13 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-#git clone https://github.com/HBPMedical/mip-deployment
-#ret=$?
-#if [[ $ret -eq 0 ]]; then
-	#cd mip-deployment
-	#git checkout dev_mipscript
-	#ret=$?
-#fi
-
-#if [[ $ret -eq 0 ]]; then
-	#cd ..
-#fi
-
 ret=0
 if [[ $ret -eq 0 ]]; then
 	if [[ "$BRANCH" != "" ]]; then
-		apt-get update
-		apt-get install --yes --no-install-recommends jq
-		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer --force-install-unstable --component-version $(/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --no-color --component exareme_master --branch "$BRANCH" version list-avail mip | awk '/exareme/ {print $NF}') install
+		echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes --keep-installer --force-install-unstable --mip-branch \"$BRANCH\" install"
+		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer --force-install-unstable --mip-branch "$BRANCH" install
 	else
+		echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer install
 	fi
 	ret=$?
@@ -63,11 +51,13 @@ if [[ $ret -eq 0 ]]; then
 fi
 
 if [[ $ret -eq 0 ]]; then
+	echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes configure user"
 	/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes configure user
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
+	echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes configure ssh"
 	/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes configure ssh
 	ret=$?
 fi

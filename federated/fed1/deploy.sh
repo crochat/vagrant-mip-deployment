@@ -1,1 +1,0 @@
-../../dev_repos/deploy.sh.federated

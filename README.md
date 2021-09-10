@@ -72,6 +72,7 @@ git clone https://github.com/crochat/vagrant-installer
 
 **BEFORE YOU INSTALL VAGRANT**, if the latest version of Vagrant is 2.2.16, edit vagrant-installer/install_vagrant.sh and set VAGRANT_LATEST_RELEASE variable to 2.2.15!!
 There's a bug in 2.2.16 which prevents Vagrant from succeeding in SSH authentication on guest machines!
+c.f. https://github.com/hashicorp/vagrant/issues/12344 and https://github.com/hashicorp/vagrant/pull/12415
 
 ```
 sudo vagrant-installer/install_vagrant.sh
@@ -109,10 +110,59 @@ Once ready, you can mount the dev_repos folder here by running:
 
 The dev_repos folder should appear.
 
-After this step, if you followed everything and did all the required configurations well, you should be able to run:
+Then, you can copy (and edit) the corresponding deploy.sh template file from dev_repos to your federated/fedX or local/localX folder as deploy.sh.
+At last, you can also copy (and edit) the vagrant-machines.yaml.template from dev_repos to your federated/fedX or local/localX folder as vagrant-machines.yaml.
+
+After these steps, if you followed everything and did all the required configurations well, you should be able to run:
 
 ```
 vagrant status
 ```
 
 It should not fail and return the status of your defined VM(s).
+
+You can use ./deploy.sh start|stop or simply follow what's inside, if you prefer to run the commands manually.
+For the federation, if you pass EXAREME_IP as an argument (along all others), everything could be able to run in parallel with:
+
+```
+vagrant up --parallel
+```
+
+Then, you'll have to finish the configuration.
+Join the pusher with:
+
+```
+vagrant ssh mipadmin@<NAME_OF_YOUR_PUSHER_MACHINE_DEFINED_IN_vagrant-machines.yaml>
+```
+
+```
+sudo /vagrant/dev_repos/mip-deployment/mip --pusher --federation <FEDERATION> configure pusher
+```
+
+```
+/vagrant/dev_repos/mip-deployment/mip --pusher --federation <FEDERATION> tmux
+```
+
+In tmux window 0:
+
+```
+/vagrant/dev_repos/mip-deployment/mip --pusher --federation <FEDERATION> data consolidate
+```
+
+```
+/vagrant/dev_repos/mip-deployment/mip --pusher --federation <FEDERATION> data compile
+```
+
+```
+/vagrant/dev_repos/mip-deployment/mip --pusher --federation <FEDERATION> --with-portainer service deploy
+```
+
+In tmux window 4 (ui):
+
+```
+/vagrant/dev_repos/mip-deployment/mip stop
+```
+
+```
+/vagrant/dev_repos/mip-deployment/mip start
+```
