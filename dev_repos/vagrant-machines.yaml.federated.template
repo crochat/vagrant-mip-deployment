@@ -28,7 +28,8 @@ global_parameters:
   os_security_groups: &os_security_groups <OPENSTACK_SECU_GROUP>     # OpenStack: Security groups to assign to machines (string or list). This is meant to be used in machine_type description.
   os_flavor_name: &os_flavor_name <OPENSTACK_FLAVOR_NAME>            # OpenStack: Flavor name to assign to machines. This is meant to be used in machine_type description.
   os_image_name: &os_image_name <OPENSTACK_IMAGE_NAME>               # OpenStack: Image name to assign to machines. This is meant to be used in machine_type description.
-  os_image_size: &os_image_size <OPENSTACK_VM_SIZE_GB>               # OpenStack: Image hard disk size to assign to machines. This is meant to be used in machine_type description.
+  os_boot_volume: &os_boot_volume true                               # OpenStack: Create boot_volume. If true, it means that you can resize it later. But in case of big source image, it may timeout before the end of the volume creation process, resulting in the instance being in Error status.
+  os_boot_volume_size: &os_boot_volume_size <OPENSTACK_VM_SIZE_GB>   # OpenStack: Boot volume hard disk size to assign to machines. This is meant to be used in machine_type description.
   os_delete_volume_on_destroy: &os_delete_volume_on_destroy true     # OpenStack: A volume is automatically created to store the root filesystem of the VM. If true, this volume will be automatically destroyed upon destroy of VM. This is meant to be used in machine_type description.
 
 provisioning:
@@ -64,28 +65,32 @@ machine_type:
     os_flavor_name: *os_flavor_name
     os_security_groups: *os_security_groups
     os_image_name: *os_image_name
-    os_image_size: *os_image_size
+    os_boot_volume: *os_boot_volume
+    os_boot_volume_size: *os_boot_volume_size
     os_delete_volume_on_destroy: *os_delete_volume_on_destroy
     provisioning: worker
   master:
     os_flavor_name: *os_flavor_name
     os_security_groups: *os_security_groups
     os_image_name: *os_image_name
-    os_image_size: *os_image_size
+    os_boot_volume: *os_boot_volume
+    os_boot_volume_size: *os_boot_volume_size
     os_delete_volume_on_destroy: *os_delete_volume_on_destroy
     provisioning: master
   ui:
     os_flavor_name: *os_flavor_name
     os_security_groups: *os_security_groups
     os_image_name: *os_image_name
-    os_image_size: *os_image_size
+    os_boot_volume: *os_boot_volume
+    os_boot_volume_size: *os_boot_volume_size
     os_delete_volume_on_destroy: *os_delete_volume_on_destroy
     provisioning: ui
   pusher:
     os_flavor_name: m1.small2
     os_security_groups: *os_security_groups
     os_image_name: *os_image_name
-    os_image_size: *os_image_size
+    os_boot_volume: *os_boot_volume
+    os_boot_volume_size: *os_boot_volume_size
     os_delete_volume_on_destroy: *os_delete_volume_on_destroy
     provisioning: pusher
 

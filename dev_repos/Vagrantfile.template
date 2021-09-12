@@ -166,11 +166,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
           os.floating_ip_pool_always_allocate = params['global_parameters']['os_new_floating_ip_allocation']
         end
 
-        os.volume_boot                        = {
-          image: "#{params['machine_type'][info['machine_type']]['os_image_name']}",
-          size: params['machine_type'][info['machine_type']]['os_image_size'].to_i,
-          delete_on_destroy: params['machine_type'][info['machine_type']]['os_delete_volume_on_destroy']
-        }
+        if params['machine_type'][info['machine_type']]['os_boot_volume'] === true
+          os.volume_boot                      = {
+            image: "#{params['machine_type'][info['machine_type']]['os_image_name']}",
+            size: params['machine_type'][info['machine_type']]['os_boot_volume_size'].to_i,
+            delete_on_destroy: params['machine_type'][info['machine_type']]['os_delete_volume_on_destroy']
+          }
+        else
+          os.image                             = "#{params['machine_type'][info['machine_type']]['os_image_name']}"
+        end
 
         override.ssh.username                 = get_machine_var params, vmname, 'ssh_username'
         override.ssh.private_key_path         = get_machine_var params, vmname, 'ssh_private_key_file'
