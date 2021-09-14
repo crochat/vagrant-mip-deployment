@@ -1,5 +1,7 @@
 global_parameters:
-  branch: &branch master
+  tag: &tag ''
+  branch: &branch ''
+  commit: &commit ''
   mip_link: &mip_link direct                                         # The way the MIP is reached, "direct" or "proxied"
   external_mip_protocol: &external_mip_protocol https                # The protocol (http or https) used on the external reverse proxy
   public_mip_protocol: &public_mip_protocol https                    # The portal_frontend protocol (http or https). Usually http when proxied and https when direct.
@@ -32,7 +34,7 @@ global_parameters:
 
 provisioning:
   local:
-    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
+    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}

@@ -1,5 +1,7 @@
 global_parameters:
-  branch: &branch master
+  tag: &tag ''
+  branch: &branch ''
+  commit: &commit ''
   federation: &federation <FEDERATION>
   exareme_ip: &exareme_ip <EXAREME_IP>                               # IP of the master node, by which the UI is supposed to contact exareme_master
   mip_link: &mip_link direct                                         # The way the MIP is reached, "direct" or "proxied"
@@ -35,27 +37,27 @@ global_parameters:
 provisioning:
   worker:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip, args: <%= defined?(hostname) %>}}
-    - {name: mip-fed-worker, type: shell, shell: {path: inside_vagrant_only.mip-fed-worker, args: [--branch, *branch]}}
+    - {name: mip-fed-worker, type: shell, shell: {path: inside_vagrant_only.mip-fed-worker, args: [--tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
     - {name: mip-import-data, type: shell, shell: {path: inside_vagrant_only.mip-import-data, args: [--federation, *federation]}}
   master:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-master, type: shell, shell: {path: inside_vagrant_only.mip-fed-master, args: [--branch, *branch]}}
+    - {name: mip-fed-master, type: shell, shell: {path: inside_vagrant_only.mip-fed-master, args: [--tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
     - {name: mip-import-cde, type: shell, shell: {path: inside_vagrant_only.mip-import-cde, args: [--federation, *federation]}}
   ui:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--exareme-ip, *exareme_ip, --mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --branch, *branch]}}
+    - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--exareme-ip, *exareme_ip, --mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
   pusher:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
-    - {name: mip-fed-pusher, type: shell, shell: {path: inside_vagrant_only.mip-fed-pusher, args: [--federation, *federation, --branch, *branch]}}
+    - {name: mip-fed-pusher, type: shell, shell: {path: inside_vagrant_only.mip-fed-pusher, args: [--federation, *federation, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}

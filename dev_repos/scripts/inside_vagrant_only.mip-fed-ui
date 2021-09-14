@@ -7,7 +7,9 @@ PUBLIC_MIP_PROTOCOL=""
 PUBLIC_MIP_HOST=""
 KEYCLOAK_PROTOCOL=""
 KEYCLOAK_URL=""
+TAG=""
 BRANCH=""
+COMMIT=""
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -47,8 +49,18 @@ while [[ $# -gt 0 ]]; do
 			shift
 			shift
 			;;
+		--tag)
+			TAG="$2"
+			shift
+			shift
+			;;
 		--branch)
 			BRANCH="$2"
+			shift
+			shift
+			;;
+		--commit)
+			COMMIT="$2"
 			shift
 			shift
 			;;
@@ -69,9 +81,9 @@ export DEBIAN_FRONTEND=noninteractive
 
 ret=0
 if [[ $ret -eq 0 ]]; then
-	if [[ "$BRANCH" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --branch \"$BRANCH\" --no-run --keep-installer install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --branch "$BRANCH" --no-run --keep-installer install
+	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --version \"$TAG\" --branch \"$BRANCH\" --commit \"$COMMIT\" --no-run --keep-installer install"
+		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --version "$TAG" --branch "$BRANCH" --commit "$COMMIT" --no-run --keep-installer install
 	else
 		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --no-run --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --no-run --keep-installer install

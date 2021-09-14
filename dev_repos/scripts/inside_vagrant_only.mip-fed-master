@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
 
+TAG=""
 BRANCH=""
+COMMIT=""
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
+		--tag)
+			TAG="$2"
+			shift
+			shift
+			;;
 		--branch)
 			BRANCH="$2"
+			shift
+			shift
+			;;
+		--commit)
+			COMMIT="$2"
 			shift
 			shift
 			;;
@@ -23,9 +35,9 @@ export DEBIAN_FRONTEND=noninteractive
 
 ret=0
 if [[ $ret -eq 0 ]]; then
-	if [[ "$BRANCH" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --branch \"$BRANCH\" install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --branch "$BRANCH" install
+	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --version \"$TAG\" --branch \"$BRANCH\" --commit \"$COMMIT\" install"
+		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --version "$TAG" --branch "$BRANCH" --commit "$COMMIT" install
 	else
 		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer install
