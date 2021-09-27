@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+VPN_HOST=""
+VPN_USER=""
+VPN_PASSWORD=""
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--vpn-host)
+			VPN_HOST="$2"
+			shift
+			shift
+			;;
+		--vpn-user)
+			VPN_USER="$2"
+			shift
+			shift
+			;;
+		--vpn-password)
+			VPN_PASSWORD="$2"
+			shift
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+result=0
+if [[ "$VPN_HOST" = "" ]]; then
+	exit $result
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+if [[ $result -eq 0 && "$(command -v openvpn)" = "" ]]; then
+	echo "Installing OpenVPN..."
+
+	apt-get update
+	result=$?
+	if [[ $result -eq 0 ]]; then
+		apt-get install --no-install-recommends --yes openvpn
+		result=$?
+	fi
+fi
+
+if [[ $result -eq 0 && ! -f /etc/openvpn/client/${VPN_HOST}.conf ]]; then
+	echo "Preparing OpenVPN configuration file..."
+
+	if [[ -f /vagrant/${VPN_HOST}.conf ]]; then
+		cp /vagrant/${VPN_HOST}.conf /etc/openvpn/client/
+		result=$?
+	fi
+
+	if [[ $result -eq 0 && -f /etc/openvpn/client/${VPN_HOST}.conf ]]; then
+		chmod 600 /etc/openvpn/client/${VPN_HOST}.conf
+		result=$?
+	else
+		echo "There was an issue while trying to prepare /etc/openvpn/client/${VPN_HOST}.conf!" >/dev/stderr
+		result=1
+	fi
+fi
+
+if [[ $result -eq 0 && "$VPN_USER" != "" && "$VPN_PASSWORD" != "" ]]; then
+	if [[ ! -f /etc/openvpn/client/${VPN_HOST}.creds ]]; then
+		echo "Preparing OpenVPN credentials..."
+
+		cat << EOF > /etc/openvpn/client/${VPN_HOST}.creds
+$VPN_USER
+$VPN_PASSWORD
+EOF
+		result=$?
+	fi
+
+	if [[ $result -eq 0 && -f /etc/openvpn/client/${VPN_HOST}.creds ]]; then
+		chmod 600 /etc/openvpn/client/${VPN_HOST}.creds
+		result=$?
+	else
+		echo "There was an issue while trying to chmod /etc/openvpn/client/${VPN_HOST}.creds!" >/dev/stderr
+		result=1
+	fi
+fi
+
+if [[ $result -eq 0 && ! -s /etc/openvpn/${VPN_HOST}.conf ]]; then
+	echo "Linking the OpenVPN configuration..."
+
+	ln -s client/${VPN_HOST}.conf /etc/openvpn/${VPN_HOST}.conf
+	result=$?
+
+	if [[ $result -eq 0 && ! -s /etc/openvpn/${VPN_HOST}.conf ]]; then
+		echo "There was an issue while trying to symlink /etc/openvpn/${VPN_HOST}.conf to /etc/openvpn/client/${VPN_HOST}.conf!" >/dev/stderr
+		result=1
+	fi
+fi
+
+exit $result

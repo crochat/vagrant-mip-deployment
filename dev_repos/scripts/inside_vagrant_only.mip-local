@@ -6,7 +6,12 @@ PUBLIC_MIP_PROTOCOL=""
 PUBLIC_MIP_HOST=""
 KEYCLOAK_PROTOCOL=""
 KEYCLOAK_URL=""
+KEYCLOAK_REALM=""
+KEYCLOAK_CLIENT_ID=""
+KEYCLOAK_CLIENT_SECRET=""
+TAG=""
 BRANCH=""
+COMMIT=""
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -41,8 +46,33 @@ while [[ $# -gt 0 ]]; do
 			shift
 			shift
 			;;
+		--keycloak-realm)
+			KEYCLOAK_REALM="$2"
+			shift
+			shift
+			;;
+		--keycloak-client-id)
+			KEYCLOAK_CLIENT_ID="$2"
+			shift
+			shift
+			;;
+		--keycloak-client-secret)
+			KEYCLOAK_CLIENT_SECRET="$2"
+			shift
+			shift
+			;;
+		--tag)
+			TAG="$2"
+			shift
+			shift
+			;;
 		--branch)
 			BRANCH="$2"
+			shift
+			shift
+			;;
+		--commit)
+			COMMIT="$2"
 			shift
 			shift
 			;;
@@ -55,7 +85,7 @@ done
 set -- "${POSITIONAL[@]}"
 
 ret=1
-if [[ "$MIP_LINK" = "" || "$EXTERNAL_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_HOST" = "" || "$KEYCLOAK_PROTOCOL" = "" || "$KEYCLOAK_URL" = "" ]]; then
+if [[ "$MIP_LINK" = "" || "$EXTERNAL_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_PROTOCOL" = "" || "$PUBLIC_MIP_HOST" = "" ]]; then
 	exit $ret
 fi
 
@@ -63,9 +93,9 @@ export DEBIAN_FRONTEND=noninteractive
 
 ret=0
 if [[ $ret -eq 0 ]]; then
-	if [[ "$BRANCH" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --branch \"$BRANCH\" --no-run --keep-installer install"
-		/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --branch "$BRANCH" --no-run --keep-installer install
+	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --version \"$TAG\" --branch \"$BRANCH\" --commit \"$COMMIT\" --no-run --keep-installer install"
+		/vagrant/dev_repos/mip-deployment/mip --quiet --yes --force-install-unstable --version "$TAG" --branch "$BRANCH" --commit "$COMMIT" --no-run --keep-installer install
 	else
 		echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --no-run --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --quiet --yes --no-run --keep-installer install
@@ -76,8 +106,37 @@ fi
 if [[ $ret -eq 0 ]]; then
 	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
 	echo "Configuring the MIP..."
-	echo "/vagrant/dev_repos/mip-deployment/mip --quiet --yes --link \"$MIP_LINK\" --ext-protocol \"$EXTERNAL_MIP_PROTOCOL\" --protocol \"$PUBLIC_MIP_PROTOCOL\" --host \"$PUBLIC_MIP_HOST\" --with-keycloak-authentication --keycloak-protocol \"$KEYCLOAK_PROTOCOL\" --keycloak-url \"$KEYCLOAK_URL\" configure all"
-	/vagrant/dev_repos/mip-deployment/mip --quiet --yes --link "$MIP_LINK" --ext-protocol "$EXTERNAL_MIP_PROTOCOL" --protocol "$PUBLIC_MIP_PROTOCOL" --host "$PUBLIC_MIP_HOST" --with-keycloak-authentication --keycloak-protocol "$KEYCLOAK_PROTOCOL" --keycloak-url "$KEYCLOAK_URL" configure all
+
+	MIP_PARAMS=()
+	MIP_PARAMS+=("--quiet")
+	MIP_PARAMS+=("--yes")
+	MIP_PARAMS+=("--link \"$MIP_LINK\"")
+	MIP_PARAMS+=("--ext-protocol \"$EXTERNAL_MIP_PROTOCOL\"")
+	MIP_PARAMS+=("--protocol \"$PUBLIC_MIP_PROTOCOL\"")
+	MIP_PARAMS+=("--host \"$PUBLIC_MIP_HOST\"")
+	if [[ "$KEYCLOAK_PROTOCOL" != "" || "$KEYCLOAK_URL" != "" || "$KEYCLOAK_REALM" != "" || "$KEYCLOAK_CLIENT_ID" != "" || "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
+		MIP_PARAMS+=("--with-keycloak-authentication")
+		if [[ "$KEYCLOAK_PROTOCOL" != "" ]]; then
+			MIP_PARAMS+=("--keycloak-protocol \"$KEYCLOAK_PROTOCOL\"")
+		fi
+		if [[ "$KEYCLOAK_URL" != "" ]]; then
+			MIP_PARAMS+=("--keycloak-url \"$KEYCLOAK_URL\"")
+		fi
+		if [[ "$KEYCLOAK_REALM" != "" ]]; then
+			MIP_PARAMS+=("--keycloak-realm \"$KEYCLOAK_REALM\"")
+		fi
+		if [[ "$KEYCLOAK_CLIENT_ID" != "" ]]; then
+			MIP_PARAMS+=("--keycloak-client-id \"$KEYCLOAK_CLIENT_ID\"")
+		fi
+		if [[ "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
+			MIP_PARAMS+=("--keycloak-client-secret \"$KEYCLOAK_CLIENT_SECRET\"")
+		fi
+	else
+		MIP_PARAMS+=("--without-keycloak-authentication")
+	fi
+
+	echo "/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[*]} configure all"
+	/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[*]} configure all
 	ret=$?
 fi
 

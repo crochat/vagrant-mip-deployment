@@ -243,8 +243,20 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
               if provisioning_report.nil? or not provisioning_report.include? provision['name']
                 if provision.has_key? 'type'
                   args = nil
+                  dyn_args = nil
                   if provision[provision['type']].has_key? 'args'
                     args = reprovision[provision['type']]['args']
+                  elsif provision[provision['type']].has_key? 'dyn_args'
+                    dyn_args = reprovision[provision['type']]['dyn_args']
+                    dyn_args.each do |dyn_arg|
+                      if info.has_key? dyn_arg.gsub('-', '_') and not info[dyn_arg.gsub('-', '_')].nil? and info[dyn_arg.gsub('-', '_')] != ''
+                        if args.nil?
+                          args = []
+                        end
+                        args.append '--' + dyn_arg
+                        args.append info[dyn_arg.gsub('-', '_')]
+                      end
+                    end
                   end
 
                   if provision[provision['type']].has_key? 'path'

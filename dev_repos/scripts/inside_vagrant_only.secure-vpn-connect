@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+VPN_HOST=""
+
+VPN_DEVICE=""
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--vpn-host)
+			VPN_HOST="$2"
+			shift
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+result=0
+if [[ "$VPN_HOST" = "" ]]; then
+	exit $result
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+_get_vpn_dev(){
+	local result=1
+
+	if [[ "$VPN_DEVICE" != "" ]]; then
+		result=0
+	fi
+
+	if [[ $result -ne 0 && -f /etc/openvpn/client/${VPN_HOST}.conf ]]; then
+		vpndev=$(grep '^dev ' /etc/openvpn/client/${VPN_HOST}.conf | cut -d' ' -f2)
+		if [[ "$vpndev" != "" ]]; then
+			VPN_DEVICE="$vpndev"
+			result=0
+		fi
+	fi
+
+	if [[ "$VPN_DEVICE" != "" ]]; then
+		result=0
+	else
+		echo "There was an issue while trying to determine the VPN connection device!" >/dev/stderr
+	fi
+
+	return $result
+}
+
+_get_vpn_dev
+result=$?
+
+if [[ $result -eq 0 && -f /etc/openvpn/$VPN_HOST.conf ]]; then
+	echo "Starting openvpn@$VPN_HOST service..."
+
+	systemctl start openvpn@$VPN_HOST.service
+	result=$?
+fi
+
+if [[ $result -eq 0 && "$VPN_DEVICE" != "" ]]; then
+	timeout=10
+	interval=1
+
+	connected=0
+	while [[ $connected -ne 1 ]]; do
+		check=$(ip address show $VPN_DEVICE)
+		if [[ "$(echo "$check" | grep ",UP,LOWER_UP")" != "" ]]; then
+			if [[ "$(echo "$check" | grep "inet .* scope global $VPN_DEVICE")" != "" ]]; then
+				connected=1
+			fi
+		fi
+
+		if [[ $connected -ne 1 && $timeout -gt 0 ]]; then
+			sleep $interval
+			timeout=$(expr $timeout - $interval)
+		fi
+	done
+
+	if [[ $connected -eq 1 ]]; then
+		result=0
+	else
+		result=1
+	fi
+else
+	result=1
+fi
+
+if [[ $result -ne 0 ]]; then
+	echo "There was an error while trying to launch the VPN connection!" >/dev/stderr
+fi
+
+exit $result

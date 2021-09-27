@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 FEDERATION=""
+TAG=""
 BRANCH=""
+COMMIT=""
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -11,8 +13,18 @@ while [[ $# -gt 0 ]]; do
 			shift
 			shift
 			;;
+		--tag)
+			TAG="$2"
+			shift
+			shift
+			;;
 		--branch)
 			BRANCH="$2"
+			shift
+			shift
+			;;
+		--commit)
+			COMMIT="$2"
 			shift
 			shift
 			;;
@@ -33,9 +45,9 @@ export DEBIAN_FRONTEND=noninteractive
 
 ret=0
 if [[ $ret -eq 0 ]]; then
-	if [[ "$BRANCH" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes --keep-installer --force-install-unstable --mip-branch \"$BRANCH\" install"
-		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer --force-install-unstable --mip-branch "$BRANCH" install
+	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
+		echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes --keep-installer --force-install-unstable --mip-version \"$TAG\" --mip-branch \"$BRANCH\" --mip-commit \"$COMMIT\" install"
+		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer --force-install-unstable --mip-version "$TAG" --mip-branch "$BRANCH" --mip-commit "$COMMIT" install
 	else
 		echo "/vagrant/dev_repos/mip-deployment/mip --pusher --federation \"$FEDERATION\" --quiet --yes --keep-installer install"
 		/vagrant/dev_repos/mip-deployment/mip --pusher --federation "$FEDERATION" --quiet --yes --keep-installer install
