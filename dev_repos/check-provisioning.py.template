@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+# required: PyYAML, paramiko
+
+import sys
+import os
+import re
+import yaml
+import paramiko
+
+provisioning_file = 'vagrant-machines.yaml'
+ssh_config_file = 'vagrant-ssh.config'
+
+def ssh_command(machine):
+    command = None
+    options = []
+    hostname = None
+
+    if os.path.isfile(ssh_config_file):
+        ssh_config = paramiko.SSHConfig()
+        ssh_config.parse(open(ssh_config_file))
+        ssh_conf = ssh_config.lookup(machine)
+        for key in ssh_conf:
+            if command is None:
+                command = 'ssh'
+            if key == 'hostname':
+                if hostname is None:
+                    hostname = ssh_conf[key]
+                else:
+                    hostname = '%s@%s' %(hostname, ssh_conf[key])
+            elif key == 'port':
+                options.append('-p %s' %(ssh_conf[key]))
+            elif key == 'user':
+                if hostname is None:
+                    hostname = '%s@' %(ssh_conf[key])
+                else:
+                    hostname = '%s@%s' %(ssh_conf[key], hostname)
+            elif key == 'identityfile':
+                options.append('-i %s' %(ssh_conf[key][0]))
+            elif key == 'userknownhostsfile':
+                options.append('-o UserKnownHostsFile="%s"' %(ssh_conf[key]))
+            elif key == 'stricthostkeychecking':
+                options.append('-o StrictHostKeyChecking="%s"' %(ssh_conf[key]))
+            elif key == 'passwordauthentication':
+                options.append('-o PasswordAuthentication="%s"' %(ssh_conf[key]))
+            elif key == 'identitiesonly':
+                options.append('-o IdentitiesOnly="%s"' %(ssh_conf[key]))
+            elif key == 'loglevel':
+                options.append('-o LogLevel="%s"' %(ssh_conf[key]))
+
+    if command is not None and hostname is not None:
+        if len(options) > 0:
+            command += ' ' + ' '.join(options)
+        command += ' %s' %(hostname)
+
+    return command
+
+if os.path.isfile(provisioning_file):
+    with open(provisioning_file, 'r') as file:
+        provision = re.sub("<%=.*%>", '', file.read())
+        provision = yaml.load(provision, Loader=yaml.FullLoader)
+
+        ssh_config = paramiko.SSHConfig()
+        ssh_config.parse(open('vagrant-ssh.config'))
+
+        if 'machine' in provision:
+            for machine in provision['machine']:
+                print('Checking provisioning state for machine "%s"...' %(machine))
+                info = provision['machine'][machine]
+                if 'machine_type' in info and 'machine_type' in provision:
+                    machine_type = provision['machine_type'][provision['machine'][machine]['machine_type']]
+                    if 'provisioning' in machine_type and 'provisioning' in provision:
+                        provisioning = provision['provisioning'][machine_type['provisioning']]
+                        prov_done_list = []
+                        ssh_conf = ssh_config.lookup(machine)
+                        ssh_cmd = ssh_command(machine)
+                        if ssh_cmd is not None:
+                            ssh_cmd = '%s -t "sudo cat /root/provision 2>/dev/null" 2>/dev/null' %(ssh_cmd)
+                            prov_done_list = os.popen(ssh_cmd).read()
+                            prov_done_list = os.linesep.join([s for s in prov_done_list.splitlines() if s])
+                            if prov_done_list is not None and prov_done_list != '':
+                                prov_done_list = prov_done_list.splitlines()
+                        for script in provisioning:
+                            script = script['name']
+                            if script not in prov_done_list:
+                                print('%s: %s was NOT done!' %(machine, script))
