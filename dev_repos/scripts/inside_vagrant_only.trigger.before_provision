@@ -53,7 +53,7 @@ if [[ "$(grep -E "^Host $VM$" $SSH_CONFIG 2>/dev/null)" = "" ]]; then
 	exit $ret
 fi
 
-USER=$(cat $SSH_CONFIG | grep -A5 -E "^Host.*$VM" | grep "User " | awk '{print $2}')
+USER=$(cat $SSH_CONFIG | grep -A5 -E "^Host.*$VM$" | grep "User " | awk '{print $2}')
 if [[ "$USER" = "" ]]; then
 	echo "Error: Can't determine user in SSH configuration!" >&2
 	exit $ret
