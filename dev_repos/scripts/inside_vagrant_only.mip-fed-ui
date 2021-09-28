@@ -125,34 +125,36 @@ if [[ $ret -eq 0 ]]; then
 	MIP_PARAMS+=("--node-type ui")
 	MIP_PARAMS+=("--quiet")
 	MIP_PARAMS+=("--yes")
-	MIP_PARAMS+=("--link \"$MIP_LINK\"")
-	MIP_PARAMS+=("--ext-protocol \"$EXTERNAL_MIP_PROTOCOL\"")
-	MIP_PARAMS+=("--protocol \"$PUBLIC_MIP_PROTOCOL\"")
-	MIP_PARAMS+=("--host \"$PUBLIC_MIP_HOST\"")
-	MIP_PARAMS+=("--exareme-ip \"$EXAREME_IP\"")
+	MIP_PARAMS+=("--link $MIP_LINK")
+	MIP_PARAMS+=("--ext-protocol $EXTERNAL_MIP_PROTOCOL")
+	MIP_PARAMS+=("--protocol $PUBLIC_MIP_PROTOCOL")
+	MIP_PARAMS+=("--host $PUBLIC_MIP_HOST")
+	if [[ "$EXAREME_IP" != "" ]]; then
+		MIP_PARAMS+=("--exareme-ip $EXAREME_IP")
+	fi
 	if [[ "$KEYCLOAK_PROTOCOL" != "" || "$KEYCLOAK_URL" != "" || "$KEYCLOAK_REALM" != "" || "$KEYCLOAK_CLIENT_ID" != "" || "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
 		MIP_PARAMS+=("--with-keycloak-authentication")
 		if [[ "$KEYCLOAK_PROTOCOL" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-protocol \"$KEYCLOAK_PROTOCOL\"")
+			MIP_PARAMS+=("--keycloak-protocol $KEYCLOAK_PROTOCOL")
 		fi
 		if [[ "$KEYCLOAK_URL" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-url \"$KEYCLOAK_URL\"")
+			MIP_PARAMS+=("--keycloak-url $KEYCLOAK_URL")
 		fi
 		if [[ "$KEYCLOAK_REALM" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-realm \"$KEYCLOAK_REALM\"")
+			MIP_PARAMS+=("--keycloak-realm $KEYCLOAK_REALM")
 		fi
 		if [[ "$KEYCLOAK_CLIENT_ID" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-client-id \"$KEYCLOAK_CLIENT_ID\"")
+			MIP_PARAMS+=("--keycloak-client-id $KEYCLOAK_CLIENT_ID")
 		fi
 		if [[ "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-client-secret \"$KEYCLOAK_CLIENT_SECRET\"")
+			MIP_PARAMS+=("--keycloak-client-secret $KEYCLOAK_CLIENT_SECRET")
 		fi
 	else
 		MIP_PARAMS+=("--without-keycloak-authentication")
 	fi
 
 	echo "/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[*]} configure all"
-	/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[*]} configure all
+	/vagrant/dev_repos/mip-deployment/mip --debug-level 6 ${MIP_PARAMS[@]} configure all
 	ret=$?
 fi
 
