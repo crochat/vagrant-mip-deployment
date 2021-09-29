@@ -4,6 +4,8 @@ global_parameters:
   commit: &commit ''
   federation: &federation <FEDERATION>
   pathology: &pathology <PATHOLOGY>                                  # Multiple pathologies can be passed, separated by coma
+  dns_servers: &dns_servers ''                                       # Multiple DNS servers can be passed, separated by coma
+  dns_search_domain: &dns_search_domain ''
   exareme_ip: &exareme_ip <EXAREME_IP>                               # IP of the master node, by which the UI is supposed to contact exareme_master
   mip_link: &mip_link direct                                         # The way the MIP is reached, "direct" or "proxied"
   external_mip_protocol: &external_mip_protocol https                # The protocol (http or https) used on the external reverse proxy
@@ -41,6 +43,7 @@ global_parameters:
 provisioning:
   worker:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip, args: <%= defined?(hostname) %>}}
+    - {name: network-dns-config, type: shell, shell: {path: inside_vagrant_only.network-dns-config, args: [--dns-servers, *dns_servers, --dns-search-domain, *dns_search_domain]}}
     - {name: mip-fed-worker, type: shell, shell: {path: inside_vagrant_only.mip-fed-worker, args: [--tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
@@ -51,6 +54,7 @@ provisioning:
     - {name: secure-vpn-connect, type: shell, shell: {path: inside_vagrant_only.secure-vpn-connect, dyn_args: [vpn-host]}}
   master:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
+    - {name: network-dns-config, type: shell, shell: {path: inside_vagrant_only.network-dns-config, args: [--dns-servers, *dns_servers, --dns-search-domain, *dns_search_domain]}}
     - {name: mip-fed-master, type: shell, shell: {path: inside_vagrant_only.mip-fed-master, args: [--tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
@@ -61,6 +65,7 @@ provisioning:
     - {name: secure-vpn-connect, type: shell, shell: {path: inside_vagrant_only.secure-vpn-connect, dyn_args: [vpn-host]}}
   ui:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
+    - {name: network-dns-config, type: shell, shell: {path: inside_vagrant_only.network-dns-config, args: [--dns-servers, *dns_servers, --dns-search-domain, *dns_search_domain]}}
     - {name: mip-fed-ui, type: shell, shell: {path: inside_vagrant_only.mip-fed-ui, args: [--exareme-ip, *exareme_ip, --mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --keycloak-realm, *keycloak_realm, --keycloak-client-id, *keycloak_client_id, --keycloak-client-secret, *keycloak_client_secret, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
@@ -70,6 +75,7 @@ provisioning:
     - {name: secure-vpn-connect, type: shell, shell: {path: inside_vagrant_only.secure-vpn-connect, dyn_args: [vpn-host]}}
   pusher:
     - {name: mip-fed-yell_my_ip, type: shell, shell: {path: inside_vagrant_only.mip-fed-yell_my_ip}}
+    - {name: network-dns-config, type: shell, shell: {path: inside_vagrant_only.network-dns-config, args: [--dns-servers, *dns_servers, --dns-search-domain, *dns_search_domain]}}
     - {name: mip-fed-pusher, type: shell, shell: {path: inside_vagrant_only.mip-fed-pusher, args: [--federation, *federation, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}

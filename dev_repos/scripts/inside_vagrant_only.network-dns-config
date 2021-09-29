@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+DNS_SERVERS=""
+DNS_SEARCH_DOMAIN=""
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--dns-servers)
+			DNS_SERVERS="$2"
+			shift
+			shift
+			;;
+		--dns-search-domain)
+			DNS_SEARCH_DOMAIN="$2"
+			shift
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+result=0
+if [[ "$DNS_SERVERS" = "" ]]; then
+	exit $result
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Setting the DNS servers..."
+sed --in-place "s/^#DNS=.*/DNS=$DNS_SERVERS/; s/^DNS=.*/DNS=$DNS_SERVERS/" /etc/systemd/resolved.conf
+result=$?
+
+if [[ $result -eq 0 && "$DNS_SEARCH_DOMAIN" != "" ]]; then
+	echo "Setting the DNS search domain..."
+	sed --in-place "s/^#Domains=.*/Domains=$DNS_SEARCH_DOMAIN/; s/^Domains=.*/Domains=$DNS_SEARCH_DOMAIN/" /etc/systemd/resolved.conf
+	result=$?
+fi
+
+if [[ $result -eq 0 ]]; then
+	echo "Restarting the Systemd Resolved service..."
+	systemctl restart systemd-resolved
+	result=$?
+fi
+
+exit $result
