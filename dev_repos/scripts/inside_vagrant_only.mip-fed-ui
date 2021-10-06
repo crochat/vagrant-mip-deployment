@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+COMMAND="/vagrant/dev_repos/mip-deployment/mip"
+NODE_TYPE="ui"
+
 EXAREME_IP=""
 MIP_LINK=""
 EXTERNAL_MIP_PROTOCOL=""
@@ -97,15 +100,37 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+GENERIC_PARAMS=()
+GENERIC_PARAMS+=('--quiet')
+GENERIC_PARAMS+=('--yes')
+GENERIC_PARAMS+=('--node-type')
+GENERIC_PARAMS+=("$NODE_TYPE")
+
 ret=0
 if [[ $ret -eq 0 ]]; then
+	INSTALL_PARAMS=()
+	INSTALL_PARAMS+=('--keep-installer')
+	INSTALL_PARAMS+=('--no-run')
+
 	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --version \"$TAG\" --branch \"$BRANCH\" --commit \"$COMMIT\" --no-run --keep-installer install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --force-install-unstable --version "$TAG" --branch "$BRANCH" --commit "$COMMIT" --no-run --keep-installer install
-	else
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --no-run --keep-installer install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --no-run --keep-installer install
+		INSTALL_PARAMS+=('--force-install-unstable')
+
+		if [[ "$TAG" != "" ]]; then
+			INSTALL_PARAMS+=('--version')
+			INSTALL_PARAMS+=("$TAG")
+		fi
+		if [[ "$BRANCH" != "" ]]; then
+			INSTALL_PARAMS+=('--branch')
+			INSTALL_PARAMS+=("$BRANCH")
+		fi
+		if [[ "$COMMIT" != "" ]]; then
+			INSTALL_PARAMS+=('--commit')
+			INSTALL_PARAMS+=("$COMMIT")
+		fi
 	fi
+
+	echo "$COMMAND ${GENERIC_PARAMS[*]} ${INSTALL_PARAMS[*]} install"
+	$COMMAND ${GENERIC_PARAMS[@]} ${INSTALL_PARAMS[@]} install
 	ret=$?
 fi
 
@@ -121,46 +146,53 @@ if [[ $ret -eq 0 ]]; then
 	echo "Configuring the MIP UI..."
 	#/vagrant/dev_repos/mip-deployment/mip --node-type ui --quiet --yes --host $(awk '/^host/ {if(NF == 4) print $4; else print $3}' /vagrant/hosts.dat):$(grep -E -A10 "^[ \t]+config.vm.define \"ui\"" /vagrant/Vagrantfile | grep forwarded_port | awk -F 'host:' '{print $2}' | awk -F ',' '{print $1}' | awk '{print $1}') --exareme-ip $(awk '/^guest .*ms / {print $3}' /vagrant/hosts.dat) --with-keycloak-authentication configure all
 
-	MIP_PARAMS=()
-	MIP_PARAMS+=("--node-type ui")
-	MIP_PARAMS+=("--quiet")
-	MIP_PARAMS+=("--yes")
-	MIP_PARAMS+=("--link $MIP_LINK")
-	MIP_PARAMS+=("--ext-protocol $EXTERNAL_MIP_PROTOCOL")
-	MIP_PARAMS+=("--protocol $PUBLIC_MIP_PROTOCOL")
-	MIP_PARAMS+=("--host $PUBLIC_MIP_HOST")
+	CONFIGURE_PARAMS=()
+	CONFIGURE_PARAMS+=('--link')
+	CONFIGURE_PARAMS+=("$MIP_LINK")
+	CONFIGURE_PARAMS+=('--ext-protocol')
+	CONFIGURE_PARAMS+=("$EXTERNAL_MIP_PROTOCOL")
+	CONFIGURE_PARAMS+=('--protocol')
+	CONFIGURE_PARAMS+=("$PUBLIC_MIP_PROTOCOL")
+	CONFIGURE_PARAMS+=('--host')
+	CONFIGURE_PARAMS+=("$PUBLIC_MIP_HOST")
 	if [[ "$EXAREME_IP" != "" ]]; then
-		MIP_PARAMS+=("--exareme-ip $EXAREME_IP")
+		CONFIGURE_PARAMS+=('--exareme-ip')
+		CONFIGURE_PARAMS+=("$EXAREME_IP")
 	fi
 	if [[ "$KEYCLOAK_PROTOCOL" != "" || "$KEYCLOAK_URL" != "" || "$KEYCLOAK_REALM" != "" || "$KEYCLOAK_CLIENT_ID" != "" || "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
-		MIP_PARAMS+=("--with-keycloak-authentication")
+		CONFIGURE_PARAMS+=('--with-keycloak-authentication')
 		if [[ "$KEYCLOAK_PROTOCOL" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-protocol $KEYCLOAK_PROTOCOL")
+			CONFIGURE_PARAMS+=('--keycloak-protocol')
+			CONFIGURE_PARAMS+=("$KEYCLOAK_PROTOCOL")
 		fi
 		if [[ "$KEYCLOAK_URL" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-url $KEYCLOAK_URL")
+			CONFIGURE_PARAMS+=('--keycloak-url')
+			CONFIGURE_PARAMS+=("$KEYCLOAK_URL")
 		fi
 		if [[ "$KEYCLOAK_REALM" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-realm $KEYCLOAK_REALM")
+			CONFIGURE_PARAMS+=('--keycloak-realm')
+			CONFIGURE_PARAMS+=("$KEYCLOAK_REALM")
 		fi
 		if [[ "$KEYCLOAK_CLIENT_ID" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-client-id $KEYCLOAK_CLIENT_ID")
+			CONFIGURE_PARAMS+=('--keycloak-client-id')
+			CONFIGURE_PARAMS+=("$KEYCLOAK_CLIENT_ID")
 		fi
 		if [[ "$KEYCLOAK_CLIENT_SECRET" != "" ]]; then
-			MIP_PARAMS+=("--keycloak-client-secret $KEYCLOAK_CLIENT_SECRET")
+			CONFIGURE_PARAMS+=('--keycloak-client-secret')
+			CONFIGURE_PARAMS+=("$KEYCLOAK_CLIENT_SECRET")
 		fi
 	else
-		MIP_PARAMS+=("--without-keycloak-authentication")
+		CONFIGURE_PARAMS+=('--without-keycloak-authentication')
 	fi
 
-	echo "/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[*]} configure all"
-	/vagrant/dev_repos/mip-deployment/mip ${MIP_PARAMS[@]} configure all
+	echo "$COMMAND ${GENERIC_PARAMS[*]} ${CONFIGURE_PARAMS[*]} configure all"
+	$COMMAND ${GENERIC_PARAMS[@]} ${CONFIGURE_PARAMS[@]} configure all
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
 	echo "Stopping the MIP UI..."
-	/vagrant/dev_repos/mip-deployment/mip --quiet --yes stop
+	$COMMAND ${GENERIC_PARAMS[@]} stop
 	ret=$?
 	if [[ $ret -ne 0 ]]; then
 		echo "Exit code $ret. Forcing to 0."
@@ -170,7 +202,7 @@ fi
 
 if [[ $ret -eq 0 ]]; then
 	echo "Starting the MIP UI..."
-	/vagrant/dev_repos/mip-deployment/mip --quiet --yes start
+	$COMMAND ${GENERIC_PARAMS[@]} start
 	ret=$?
 	if [[ $ret -ne 0 ]]; then
 		echo "Exit code $ret. Forcing to 0."

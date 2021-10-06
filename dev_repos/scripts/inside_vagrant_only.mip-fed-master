@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+COMMAND="/vagrant/dev_repos/mip-deployment/mip"
+NODE_TYPE="ms"
+
 TAG=""
 BRANCH=""
 COMMIT=""
@@ -33,21 +36,41 @@ set -- "${POSITIONAL[@]}"
 ret=1
 export DEBIAN_FRONTEND=noninteractive
 
+GENERIC_PARAMS=()
+GENERIC_PARAMS+=('--quiet')
+GENERIC_PARAMS+=('--yes')
+GENERIC_PARAMS+=('--node-type')
+GENERIC_PARAMS+=("$NODE_TYPE")
+
 ret=0
 if [[ $ret -eq 0 ]]; then
+	INSTALL_PARAMS=()
+	INSTALL_PARAMS+=('--keep-installer')
+
 	if [[ "$TAG" != "" || "$BRANCH" != "" || "$COMMIT" != "" ]]; then
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --version \"$TAG\" --branch \"$BRANCH\" --commit \"$COMMIT\" install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer --force-install-unstable --version "$TAG" --branch "$BRANCH" --commit "$COMMIT" install
-	else
-		echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer install"
-		/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes --keep-installer install
+		INSTALL_PARAMS+=('--force-install-unstable')
+		if [[ "$TAG" != "" ]]; then
+			INSTALL_PARAMS+=('--version')
+			INSTALL_PARAMS+=("$TAG")
+		fi
+		if [[ "$BRANCH" != "" ]]; then
+			INSTALL_PARAMS+=('--branch')
+			INSTALL_PARAMS+=("$BRANCH")
+		fi
+		if [[ "$COMMIT" != "" ]]; then
+			INSTALL_PARAMS+=('--commit')
+			INSTALL_PARAMS+=("$COMMIT")
+		fi
 	fi
+
+	echo "$COMMAND ${GENERIC_PARAMS[*]} ${INSTALL_PARAMS[*]} install"
+	$COMMAND ${GENERIC_PARAMS[@]} ${INSTALL_PARAMS[@]} install
 	ret=$?
 fi
 
 if [[ $ret -eq 0 ]]; then
-	echo "/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes configure all"
-	/vagrant/dev_repos/mip-deployment/mip --node-type ms --quiet --yes configure all
+	echo "$COMMAND ${GENERIC_PARAMS[*]} configure all"
+	$COMMAND ${GENERIC_PARAMS[@]} configure all
 	ret=$?
 fi
 
