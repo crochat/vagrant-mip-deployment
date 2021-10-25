@@ -40,7 +40,7 @@ global_parameters:
 provisioning:
   local:
     - {name: network-dns-config, type: shell, shell: {path: inside_vagrant_only.network-dns-config, args: [--dns-servers, *dns_servers, --dns-search-domain, *dns_search_domain]}}
-    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --keycloak-realm, *keycloak_realm, --keycloak-user-id, *keycloak_user_id, --keycloak-user-secret, *keycloak_user_secret, --tag, *tag, --branch, *branch, --commit, *commit]}}
+    - {name: mip-local, type: shell, shell: {path: inside_vagrant_only.mip-local, args: [--mip-link, *mip_link, --external-mip-protocol, *external_mip_protocol, --public-mip-protocol, *public_mip_protocol, --public-mip-host, *public_mip_host, --keycloak-protocol, *keycloak_protocol, --keycloak-url, *keycloak_url, --keycloak-realm, *keycloak_realm, --keycloak-client-id, *keycloak_client_id, --keycloak-client-secret, *keycloak_client_secret, --tag, *tag, --branch, *branch, --commit, *commit]}}
     - {name: install-mc, type: shell, shell: {path: inside_vagrant_only.install-mc}}
     - {name: upgrade-os, type: shell, shell: {path: inside_vagrant_only.upgrade-os}}
     - {name: cleanup-apt, type: shell, shell: {path: inside_vagrant_only.cleanup-apt}}
