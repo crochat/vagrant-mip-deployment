@@ -62,13 +62,22 @@ if [[ $ret -eq 0 ]]; then
 		if [[ "$TAG" != "" ]]; then
 			INSTALL_PARAMS+=('--version')
 			INSTALL_PARAMS+=("$TAG")
+
+			INSTALL_PARAMS+=('--mip-version')
+			INSTALL_PARAMS+=("$TAG")
 		fi
 		if [[ "$BRANCH" != "" ]]; then
 			INSTALL_PARAMS+=('--branch')
 			INSTALL_PARAMS+=("$BRANCH")
+
+			INSTALL_PARAMS+=('--mip-branch')
+			INSTALL_PARAMS+=("$BRANCH")
 		fi
 		if [[ "$COMMIT" != "" ]]; then
 			INSTALL_PARAMS+=('--commit')
+			INSTALL_PARAMS+=("$COMMIT")
+
+			INSTALL_PARAMS+=('--mip-commit')
 			INSTALL_PARAMS+=("$COMMIT")
 		fi
 	fi
