@@ -1,5 +1,39 @@
 #!/usr/bin/env bash
 
+get_os(){
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--distrib-id-var)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					eval "$2='$(lsb_release -si|awk '{print tolower($0)}')'"
+					shift
+				fi
+				shift
+				;;
+			--distrib-release-var)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					eval "$2='$(lsb_release -sr)'"
+					shift
+				fi
+				shift
+				;;
+			--distrib-codename-var)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					eval "$2='$(lsb_release -sc|awk '{print tolower($0)}')'"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+	set -- "${positional[@]}"
+}
+
 check_os(){
 	local result=0
 	if [[ "$(lsb_release -si)" != "$REQUIRED_OS_DISTRIBUTOR_ID" || "$(lsb_release -sr)" != "$REQUIRED_OS_RELEASE" ]]; then
@@ -17,9 +51,7 @@ check_os(){
 			echo "Required OS version: $REQUIRED_OS_DISTRIBUTOR_ID $REQUIRED_OS_RELEASE!"
 		fi
 	else
-		DISTRIB_ID=$(lsb_release -si|awk '{print tolower($0)}')
-		DISTRIB_RELEASE=$(lsb_release -sr)
-		DISTRIB_CODENAME=$(lsb_release -sc|awk '{print tolower($0)}')
+		get_os --distrib-id-var 'DISTRIB_ID' --distrib-release-var 'DISTRIB_RELEASE' --distrib-codename-var 'DISTRIB_CODENAME'
 	fi
 
 	return $result
@@ -269,7 +301,6 @@ apt_key_add(){
 			rm $src_key_file
 		fi
 
-		file $tmp_keyring_file
 		if [[ "$(file $tmp_keyring_file | grep -i 'GPG keybox database')" != "" || "$(file $tmp_keyring_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
 			result=0
 		fi
@@ -293,6 +324,7 @@ apt_key_add(){
 			rm ${tmp_keyring_file}~
 		fi
 
+		chmod 644 $tmp_key_file
 		mv $tmp_key_file $keys_path/$sub_keys_path/$KEY_NAME.gpg
 		result=$?
 	fi
@@ -396,20 +428,36 @@ apt_key(){
 }
 
 prepare_docker_apt_sources(){
+	local DISTRIB_ID=""
+	local DISTRIB_RELEASE=""
+	local DISTRIB_CODENAME=""
+
 	local next=0
+	get_os --distrib-id-var 'DISTRIB_ID' --distrib-release-var 'DISTRIB_RELEASE' --distrib-codename-var 'DISTRIB_CODENAME'
+	if [[ "$DISTRIB_ID" != "" && "$DISTRIB_RELEASE" != "" && "$DISTRIB_CODENAME" != "" ]]; then
+		next=1
+	fi
+
+	if [[ $next -eq 1 ]]; then
+		next=0
+	else
+		return 1
+	fi
+
 	while [[ $next -eq 0 ]]; do
 		next=1
-		if [[ "$(apt_key fingerprint 0EBFCD88 2>/dev/null)" = "" ]]; then
-			apt_key add --key https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID/gpg --key-name docker
+		apt_key add --key https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID/gpg --key-name docker
+		if [[ $? -ne 0 ]]; then
 			next=0
 		fi
-		if [[ "$(grep -R $DOCKER_DOWNLOAD_HOST /etc/apt)" = "" ]]; then
+		if [[ $next -eq 1 && "$(grep -R $DOCKER_DOWNLOAD_HOST /etc/apt)" = "" ]]; then
 			export DEBIAN_FRONTEND=noninteractive
 			add-apt-repository "deb [arch=amd64] https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID $DISTRIB_CODENAME stable"
 			apt-get update
 			next=0
 		fi
 	done
+
 }
 
 install_required_packages(){

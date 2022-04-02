@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-source $(realpath $(dirname $0))/utils
-
 DOCKER_DOWNLOAD_HOST="download.docker.com"
 REQUIRED_OS_DISTRIBUTOR_ID="Ubuntu"
 REQUIRED_OS_RELEASE="20.04"
@@ -12,9 +10,30 @@ REQUIRED_PACKAGES="docker-ce docker-ce-cli docker-ce-rootless-extras containerd.
 REQUIRED_PIP3_PACKAGES="chardet"
 REQUIRED_CUSTOM_PACKAGES="docker-compose"
 
+SCRIPTS_PATH=""
 
-export DEBIAN_FRONTEND=noninteractive
+positional=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
+			shift
+			;;
+		*)
+			positional+=("$1")
+			shift
+			;;
+	esac
+done
 
+if [[ ! -f $SCRIPTS_PATH/utils ]]; then
+	echo "ERROR: $SCRIPTS_PATH/utils: file not found!" >/dev/stderr
+	exit 1
+fi
+source $SCRIPTS_PATH/utils
 
 
 ret=1
