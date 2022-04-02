@@ -31,6 +31,8 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
+export DEBIAN_FRONTEND=noninteractive
+
 ret=1
 if [[ "$VM" = "" || "$SSH_CONFIG" = "" ]]; then
 	echo "Error: Missing parameters!" >&2

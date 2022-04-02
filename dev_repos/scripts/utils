@@ -1,0 +1,538 @@
+#!/usr/bin/env bash
+
+check_os(){
+	local result=0
+	if [[ "$(lsb_release -si)" != "$REQUIRED_OS_DISTRIBUTOR_ID" || "$(lsb_release -sr)" != "$REQUIRED_OS_RELEASE" ]]; then
+		if [[ "$1" = "--greater-or-equal" ]]; then
+			local required=$(echo $REQUIRED_OS_RELEASE | sed 's/\.//g')
+			local installed=$(lsb_release -sr | sed 's/\.//g')
+			if [[ $installed -lt $required ]]; then
+				result=1
+			fi
+		else
+			result=1
+		fi
+
+		if [[ $result -eq 1 ]]; then
+			echo "Required OS version: $REQUIRED_OS_DISTRIBUTOR_ID $REQUIRED_OS_RELEASE!"
+		fi
+	else
+		DISTRIB_ID=$(lsb_release -si|awk '{print tolower($0)}')
+		DISTRIB_RELEASE=$(lsb_release -sr)
+		DISTRIB_CODENAME=$(lsb_release -sc|awk '{print tolower($0)}')
+	fi
+
+	return $result
+}
+
+apt_key_list_filecontent(){
+	local KEY_FILE=""
+
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--key-file)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY_FILE="$2"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+	set -- "$positional[@]"
+
+	local result=1
+	if [[ "$KEY_FILE" != "" && -f $KEY_FILE ]]; then
+		gpg --fingerprint --import-options show-only --import < $KEY_FILE 2>/dev/null
+		result=$?
+	fi
+
+	return $result
+}
+
+apt_key_get_key_from_file(){
+	local KEY_FILE=""
+	local SEARCH_KEY=""
+	local KEY_VAR=""
+
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--key-file)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY_FILE="$2"
+					shift
+				fi
+				shift
+				;;
+			--search-key)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					SEARCH_KEY="$2"
+					shift
+				fi
+				shift
+				;;
+			--key-var)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY_VAR="$2"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+	set -- "$positional[@]"
+
+	local result=1
+	if [[ "$KEY_FILE" != "" && -f $KEY_FILE && "$SEARCH_KEY" != "" ]]; then
+		local key_size
+		local found_key=0
+		local search_key_size
+		local lines
+		local line
+		local in_key
+		local key_parts
+		local ret_key
+		local key_str
+
+		in_key=0
+		while IFS=$'\n' read -r line; do
+			if [[ "$(echo "$line" | grep '^pub')" != "" ]]; then
+				in_key=1
+				ret_key=()
+				key_size=0
+				key_parts=()
+				key_str=""
+			elif [[ $in_key -eq 1 && "$line" = "" ]]; then
+				in_key=0
+				if [[ $found_key -eq 1 ]]; then
+					break
+				fi
+			fi
+
+			if [[ $in_key -eq 1 ]]; then
+				ret_key+=("$line")
+				search_key_size=$(echo -n $SEARCH_KEY | wc -m)
+
+				if [[ "$(echo "$line" | grep '^ ')" != "" ]]; then
+					while IFS=$'\n' read -r part; do
+						key_parts+=("$part")
+					done <<< $(echo "$line" | tr ' ' '\n' | sed '/^$/d')
+
+					key_size=$((${#key_parts[@]} * 4))
+					if [[ $key_size -ge $search_key_size ]]; then
+						case $search_key_size in
+							8)
+								key_str="${key_parts[$((${#key_parts[@]}-2))]}${key_parts[$((${#key_parts[@]}-1))]}"
+								;;
+							16)
+								key_str="${key_parts[$((${#key_parts[@]}-4))]}${key_parts[$((${#key_parts[@]}-3))]}${key_parts[$((${#key_parts[@]}-2))]}${key_parts[$((${#key_parts[@]}-1))]}"
+								;;
+							*)
+								key_str="$(echo "${key_parts[*]}" | sed 's/ //g')"
+								;;
+						esac
+
+						if [[ "$key_str" != "" && "$key_str" = "$SEARCH_KEY" ]]; then
+							found_key=1
+						fi
+					fi
+				fi
+			fi
+		done <<< $(gpg --fingerprint --import-options show-only --import < $KEY_FILE 2>/dev/null)
+	fi
+
+	if [[ $found_key -eq 1 ]]; then
+		result=0
+		if [[ "$KEY_VAR" != "" ]]; then
+			for part in "${ret_key[@]}"; do
+				eval "$KEY_VAR+=('$part')"
+			done
+		fi
+	fi
+
+	return $result
+}
+
+apt_key_add(){
+	local keys_path="/etc/apt"
+	local sub_keys_path="trusted.gpg.d"
+
+	local KEY=""
+	local KEY_NAME=""
+
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--key)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY="$2"
+					shift
+				fi
+				shift
+				;;
+			--key-name)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY_NAME="$2"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+	set -- "$positional[@]"
+
+	local result=1
+	local src_key_file=""
+	local src_key_str=""
+	local tmp_keyring_file=""
+	local tmp_key_file=""
+	local found_key=0
+
+	if [[ "$KEY" != "" && "$KEY_NAME" != "" ]]; then
+		if [[ "$(echo $KEY | grep '^http')" != "" ]]; then
+			src_key_file=$(mktemp /tmp/aptkey.XXXXXX)
+			if [[ "$src_key_file" != "" && -f $src_key_file ]]; then
+				curl -fsSL -o $src_key_file $KEY
+				result=$?
+			fi
+		elif [[ -f $KEY ]]; then
+			src_key_file="$KEY"
+			result=0
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		if [[ "$(file $src_key_file | grep -i 'PGP public key block Public-Key')" != "" ]]; then
+			result=0
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		src_key_str=$(gpg --fingerprint --import-options show-only --import < $src_key_file 2>/dev/null | grep -A1 '^pub' | tail -1 | awk '{print $(NF-1)$(NF)}')
+
+		if [[ "$src_key_str" != "" ]]; then
+			result=0
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		local ret
+		for key_file in $(find $keys_path -type f -name "*.gpg" -o -name "*.key" -o -name "*.asc"); do
+			apt_key_get_key_from_file --key-file "$key_file" --search-key "$src_key_str"
+			ret=$?
+
+			if [[ $ret -eq 0 ]]; then
+				found_key=1
+				break
+			fi
+		done
+
+		if [[ $found_key -eq 0 ]]; then
+			result=0
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		tmp_keyring_file=$(mktemp /tmp/aptkey_keyring.XXXXXX)
+		if [[ "$tmp_keyring_file" != "" && -f $tmp_keyring_file ]]; then
+			gpg --no-default-keyring --keyring $tmp_keyring_file --import $src_key_file
+			result=$?
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		if [[ "$(realpath $(dirname $src_key_file))" = "/tmp" ]]; then
+			rm $src_key_file
+		fi
+
+		file $tmp_keyring_file
+		if [[ "$(file $tmp_keyring_file | grep -i 'GPG keybox database')" != "" || "$(file $tmp_keyring_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
+			result=0
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		tmp_key_file=$(mktemp /tmp/aptkey_final_key.XXXXXX)
+		if [[ "$tmp_key_file" != "" && -f $tmp_key_file ]]; then
+			gpg --no-default-keyring --keyring $tmp_keyring_file --export >$tmp_key_file
+			result=$?
+		fi
+	fi
+
+	if [[ $result -eq 0 ]]; then
+		result=1
+
+		if [[ "$(realpath $(dirname $tmp_keyring_file))" = "/tmp" ]]; then
+			rm $tmp_keyring_file
+			rm ${tmp_keyring_file}~
+		fi
+
+		mv $tmp_key_file $keys_path/$sub_keys_path/$KEY_NAME.gpg
+		result=$?
+	fi
+
+	if [[ $result -ne 0 && $found_key -eq 1 ]]; then
+		result=0
+	fi
+
+	return $result
+}
+
+apt_key(){
+	local keys_path="/etc/apt"
+
+	local ACTION=""
+	local ACTION_ARG=""
+	local KEY=""
+	local KEY_NAME=""
+
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			fingerprint|finger|list)
+				ACTION="fingerprint"
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					ACTION_ARG="$2"
+					shift
+				fi
+				shift
+				;;
+			add)
+				ACTION="add"
+				shift
+				;;
+			--key)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY="$2"
+					shift
+				fi
+				shift
+				;;
+			--key-name)
+				if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+					KEY_NAME="$2"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+
+	local result=1
+
+	case $ACTION in
+		fingerprint|finger|list)
+			local key_file
+			local found_key=0
+			local ret
+			local key
+			local part
+
+			for key_file in $(find $keys_path -type f -name "*.gpg" -o -name "*.key"); do
+				if [[ "$ACTION_ARG" = "" || "$ACTION" = "list" ]]; then
+					echo "$key_file"
+					echo "$key_file" | sed 's/./-/g'
+					apt_key_list_filecontent --key-file $key_file
+				else
+					apt_key_get_key_from_file --key-file "$key_file" --search-key "$ACTION_ARG" --key-var "key"
+					ret=$?
+
+					if [[ $ret -eq 0 ]]; then
+						found_key=1
+						break
+					fi
+				fi
+			done
+
+			if [[ "$ACTION" != "list" && "$ACTION_ARG" != "" && $found_key -eq 1 ]]; then
+				#echo "$key_file"
+				#echo "$key_file" | sed 's/./-/g'
+				for part in "${key[@]}"; do
+					echo "$part"
+				done
+			fi
+
+			result=0
+			;;
+		add)
+			if [[ "$KEY" != "" && "$KEY_NAME" != "" ]]; then
+				apt_key_add --key $KEY --key-name $KEY_NAME
+				result=$?
+			fi
+			;;
+	esac
+
+	return $result
+}
+
+prepare_docker_apt_sources(){
+	local next=0
+	while [[ $next -eq 0 ]]; do
+		next=1
+		if [[ "$(apt_key fingerprint 0EBFCD88 2>/dev/null)" = "" ]]; then
+			apt_key add --key https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID/gpg --key-name docker
+			next=0
+		fi
+		if [[ "$(grep -R $DOCKER_DOWNLOAD_HOST /etc/apt)" = "" ]]; then
+			export DEBIAN_FRONTEND=noninteractive
+			add-apt-repository "deb [arch=amd64] https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID $DISTRIB_CODENAME stable"
+			apt-get update
+			next=0
+		fi
+	done
+}
+
+install_required_packages(){
+	local required_packages=""
+	case $1 in
+		prerequired)
+			required_packages=$PREREQUIRED_PACKAGES
+			;;
+		required)
+			required_packages=$REQUIRED_PACKAGES
+			;;
+		pip3)
+			required_packages=$REQUIRED_PIP3_PACKAGES
+			;;
+		*)
+			return 1
+			;;
+	esac
+
+	local next=0
+	while [[ $next -eq 0 ]]; do
+		local packages=""
+		next=1
+		for package in $required_packages; do
+			local match=""
+			if [[ "$1" = "pip3" ]]; then
+				match=$(pip3 list --format=columns|grep "^$package "|awk '{print $1}')
+			else
+				match=$(dpkg --list|grep "^ii\s*$package[ :]")
+			fi
+			if [[ "$match" = "" ]]; then
+				packages="$packages $package"
+				next=0
+			fi
+		done
+		local install_option="-y"
+		if [[ $next -eq 0 ]]; then
+			if [[ "$1" = "pip3" ]]; then
+				pip3 install $packages
+			else
+				export DEBIAN_FRONTEND=noninteractive
+				apt-get update && apt-get install $install_option $packages
+			fi
+		fi
+	done
+}
+
+install_required_custom_packages(){
+	local result=0
+	local packages=""
+	for package in $REQUIRED_CUSTOM_PACKAGES; do
+		if [[ ! $(command -v $package) ]]; then
+			packages="$packages $package"
+		fi
+	done
+
+	if [[ "$packages" != "" ]]; then
+		echo "custom packages to be installed=<$packages>"
+	fi
+
+	for package in $packages; do
+		install_custom_package_$package
+	done
+
+	return $result
+}
+
+install_custom_package_pyenv(){
+	if [[ ! $(command -v pyenv) ]]; then
+		if [[ ! -d /usr/src/pyenv ]]; then
+			git clone https://github.com/pyenv/pyenv /usr/src/pyenv
+		fi
+		ln -s /usr/src/pyenv/bin/pyenv /usr/bin/
+		if [[ "$(awk '/PYENV_ROOT=/' /root/.bashrc)" = "" ]]; then
+			echo 'PYENV_ROOT="/usr/src/pyenv"' >> /root/.bashrc
+		fi
+		if [[ "$(env|grep PYENV_ROOT)" = "" ]]; then
+			export PYENV_ROOT="/usr/src/pyenv"
+		fi
+	fi
+}
+
+install_custom_package_python2(){
+	if [[ "$(pyenv versions|grep 2.7.)" = "" ]]; then
+		local aptoption=""
+		if [[ $ARG_YES -eq 1 ]]; then
+			aptoption="-y"
+		fi
+		export DEBIAN_FRONTEND=noninteractive
+		apt-get update && apt-get install $aptoption build-essential zlib1g-dev libreadline-dev libbz2-dev libsqlite3-dev libssl-dev
+		echo "Installing Python 2.7. This may take a while..."
+		pyenv install 2.7.17
+	fi
+	ln -s $PYENV_ROOT/versions/2.7.17/bin/pip2.7 /usr/bin/
+	ln -s pip2.7 /usr/bin/pip2
+	ln -s pip2 /usr/bin/pip
+
+	ln -s $PYENV_ROOT/versions/2.7.17/bin/python2.7 /usr/bin/
+	ln -s python2.7 /usr/bin/python2
+	ln -s python2 /usr/bin/python
+
+	ln -s $PYENV_ROOT/versions/2.7.17/bin/python2.7-config /usr/bin/
+	ln -s python2.7-config /usr/bin/python2-config
+	ln -s python2-config /usr/bin/python-config
+}
+
+install_custom_package_docker-compose(){
+	local version=`curl --silent "https://api.github.com/repos/docker/compose/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
+	curl --silent -L "https://github.com/docker/compose/releases/download/$version/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+	chmod +x /usr/local/bin/docker-compose
+}
+
+domain_to_ldap() {
+	local domain=$1
+
+	local ldap_string=""
+
+	while IFS=$'\n' read -r dc; do
+		if [[ "$ldap_string" != "" ]]; then
+			ldap_string+=","
+		fi
+		ldap_string+="DC=$dc"
+	done <<< "$(echo $domain | tr '.' '\n')"
+
+	echo $ldap_string
+}

@@ -17,4 +17,8 @@ if [[ $ret -eq 0 ]]; then
 	ret=$?
 fi
 
+if [[ $ret -eq 0 && "$(command -v mc)" = "" ]]; then
+	ret=1
+fi
+
 exit $ret
