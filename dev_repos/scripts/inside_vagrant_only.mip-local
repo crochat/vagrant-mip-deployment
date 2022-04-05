@@ -114,7 +114,7 @@ if [[ $ret -eq 0 ]]; then
 			INSTALL_PARAMS+=('--branch')
 			INSTALL_PARAMS+=("$BRANCH")
 		fi
-		if [[ "$TAG" != "" ]]; then
+		if [[ "$COMMIT" != "" ]]; then
 			INSTALL_PARAMS+=('--commit')
 			INSTALL_PARAMS+=("$COMMIT")
 		fi
