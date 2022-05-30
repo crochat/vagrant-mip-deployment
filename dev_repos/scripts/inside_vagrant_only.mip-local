@@ -15,67 +15,99 @@ TAG=""
 BRANCH=""
 COMMIT=""
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--mip-link)
-			MIP_LINK="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--mip-link)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				MIP_LINK="$2"
+				shift
+			fi
 			shift
 			;;
 		--external-mip-protocol)
-			EXTERNAL_MIP_PROTOCOL="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				EXTERNAL_MIP_PROTOCOL="$2"
+				shift
+			fi
 			shift
 			;;
 		--public-mip-protocol)
-			PUBLIC_MIP_PROTOCOL="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				PUBLIC_MIP_PROTOCOL="$2"
+				shift
+			fi
 			shift
 			;;
 		--public-mip-host)
-			PUBLIC_MIP_HOST="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				PUBLIC_MIP_HOST="$2"
+				shift
+			fi
 			shift
 			;;
 		--keycloak-protocol)
-			KEYCLOAK_PROTOCOL="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				KEYCLOAK_PROTOCOL="$2"
+				shift
+			fi
 			shift
 			;;
 		--keycloak-url)
-			KEYCLOAK_URL="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				KEYCLOAK_URL="$2"
+				shift
+			fi
 			shift
 			;;
 		--keycloak-realm)
-			KEYCLOAK_REALM="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				KEYCLOAK_REALM="$2"
+				shift
+			fi
 			shift
 			;;
 		--keycloak-client-id)
-			KEYCLOAK_CLIENT_ID="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				KEYCLOAK_CLIENT_ID="$2"
+				shift
+			fi
 			shift
 			;;
 		--keycloak-client-secret)
-			KEYCLOAK_CLIENT_SECRET="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				KEYCLOAK_CLIENT_SECRET="$2"
+				shift
+			fi
 			shift
 			;;
 		--tag)
-			TAG="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				TAG="$2"
+				shift
+			fi
 			shift
 			;;
 		--branch)
-			BRANCH="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				BRANCH="$2"
+				shift
+			fi
 			shift
 			;;
 		--commit)
-			COMMIT="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				COMMIT="$2"
+				shift
+			fi
 			shift
 			;;
 		*)
@@ -114,7 +146,7 @@ if [[ $ret -eq 0 ]]; then
 			INSTALL_PARAMS+=('--branch')
 			INSTALL_PARAMS+=("$BRANCH")
 		fi
-		if [[ "$COMMIT" != "" ]]; then
+		if [[ "$TAG" != "" ]]; then
 			INSTALL_PARAMS+=('--commit')
 			INSTALL_PARAMS+=("$COMMIT")
 		fi
@@ -196,6 +228,17 @@ if [[ $ret -eq 0 ]]; then
 		ln -s /vagrant/data /opt/mip-deployment/
 	fi
 fi
+
+#if [[ $ret -eq 0 ]]; then
+#	if [[ -f /vagrant/dev_repos/mip-deployment/docker-compose.yml ]]; then
+#		if [[ -f /opt/mip-deployment/docker-compose.yml ]]; then
+#			mv /opt/mip-deployment/docker-compose.yml /opt/mip-deployment/docker-compose.yml.bak
+#		fi
+#		if [[ ! -s /opt/mip-deployment/docker-compose.yml ]]; then
+#			ln -s /vagrant/dev_repos/mip-deployment/docker-compose.yml /opt/mip-deployment/docker-compose.yml
+#		fi
+#	fi
+#fi
 
 if [[ $ret -eq 0 ]]; then
 	echo "$COMMAND data consolidate"

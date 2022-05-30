@@ -3,17 +3,29 @@
 FEDERATION=""
 PATHOLOGY=""
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--federation)
-			FEDERATION="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--federation)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				FEDERATION="$2"
+				shift
+			fi
 			shift
 			;;
 		--pathology)
-			PATHOLOGY="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				PATHOLOGY="$2"
+				shift
+			fi
 			shift
 			;;
 		*)
@@ -34,9 +46,7 @@ if [[ $ret -eq 0 ]]; then
 		ret=$?
 	else
 		while IFS=$'\n' read -r pathology; do
-			if [[ "$pathology" != "" && -d /vagrant/dev_repos/mip_fed_to-be-imported_cde/$pathology ]]; then
-				su -- mipadmin -c "cp -r /vagrant/dev_repos/mip_fed_to-be-imported_cde/$pathology /data/$FEDERATION/"
-			fi
+			su -- mipadmin -c "cp -r /vagrant/dev_repos/mip_fed_to-be-imported_cde/$pathology /data/$FEDERATION/"
 		done <<< "$(echo "$PATHOLOGY" | tr ',' '\n')"
 	fi
 fi

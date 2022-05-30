@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+KERNEL_VERSION=""
+
+SCRIPTS_PATH=$(realpath $(dirname $0))
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
+			shift
+			;;
+		--kernel-version)
+			if [[ "$2" != "" && "$()" != "-" ]]; then
+				KERNEL_VERSION="$2"
+				shift
+			fi
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
+if [[ ! -d $SCRIPTS_PATH ]]; then
+	echo "$SCRIPTS_PATH: No such file or directory!" >/dev/stderr
+	exit 1
+fi
+source $SCRIPTS_PATH/utils
+
+
+ret=1
+if [[ "$KERNEL_VERSION" != "" ]]; then
+	fix_federation_docker_swarm_kernel_version $KERNEL_VERSION
+	ret=$?
+fi
+
+if [[ $ret -eq 2 ]]; then
+	echo "NEED TO LOAD THE WANTED KERNEL!" >/dev/stderr
+	echo "THIS VM WILL REBOOT, AND YOU WILL HAVE TO CTRL-C YOUR PROVISIONING OR WAIT FOR A TIMEOUT!" >/dev/stderr
+	echo "AFTER THE REBOOT, YOU WILL HAVE TO REPROVISION AGAIN!" >/dev/stderr
+	echo "REBOOTING NOW!" >/dev/stderr
+	reboot
+fi
+
+exit $ret

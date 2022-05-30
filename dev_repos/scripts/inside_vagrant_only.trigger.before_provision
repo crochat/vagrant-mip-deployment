@@ -6,17 +6,29 @@ SSH_CONFIG=""
 SSHFS_ALLOW_OTHER=0
 SSHFS_ARGS=()
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--vm)
-			VM="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--vm)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				VM="$2"
+				shift
+			fi
 			shift
 			;;
 		--ssh-config)
-			SSH_CONFIG="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SSH_CONFIG="$2"
+				shift
+			fi
 			shift
 			;;
 		--sshfs-allow-other)
@@ -30,8 +42,6 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 set -- "${POSITIONAL[@]}"
-
-export DEBIAN_FRONTEND=noninteractive
 
 ret=1
 if [[ "$VM" = "" || "$SSH_CONFIG" = "" ]]; then
@@ -115,8 +125,8 @@ export DEBIAN_FRONTEND=noninteractive
 pid=0
 ppid=0
 if [[ "\$(command -v sshfs)" = "" ]]; then
-	sudo apt-get update
-	sudo apt-get install -y --no-install-recommends sshfs
+	sudo DEBIAN_FRONTEND=noninteractive apt-get update
+	sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sshfs
 	pid=\$!
 fi
 

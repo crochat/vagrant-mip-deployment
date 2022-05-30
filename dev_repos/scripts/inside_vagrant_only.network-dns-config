@@ -3,17 +3,29 @@
 DNS_SERVERS=""
 DNS_SEARCH_DOMAIN=""
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--dns-servers)
-			DNS_SERVERS="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--dns-servers)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				DNS_SERVERS="$2"
+				shift
+			fi
 			shift
 			;;
 		--dns-search-domain)
-			DNS_SEARCH_DOMAIN="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				DNS_SEARCH_DOMAIN="$2"
+				shift
+			fi
 			shift
 			;;
 		*)

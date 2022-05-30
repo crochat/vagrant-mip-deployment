@@ -7,27 +7,43 @@ TAG=""
 BRANCH=""
 COMMIT=""
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--federation)
-			FEDERATION="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--federation)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				FEDERATION="$2"
+				shift
+			fi
 			shift
 			;;
 		--tag)
-			TAG="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				TAG="$2"
+				shift
+			fi
 			shift
 			;;
 		--branch)
-			BRANCH="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				BRANCH="$2"
+				shift
+			fi
 			shift
 			;;
 		--commit)
-			COMMIT="$2"
-			shift
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				COMMIT="$2"
+				shift
+			fi
 			shift
 			;;
 		*)

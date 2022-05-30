@@ -19,13 +19,16 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
+if [[ ! -d $SCRIPTS_PATH ]]; then
+	echo "$SCRIPTS_PATH: No such file or directory!" >/dev/stderr
+	exit 1
+fi
+source $SCRIPTS_PATH/utils
+
+
 ret=1
 
-sed --in-place 's/^PasswordAuthentication no/#PasswordAuthentication no/g' /etc/ssh/sshd_config
-ret=$?
-if [[ $ret -eq 0 ]]; then
-	systemctl restart ssh
-	ret=$?
-fi
+# INSTRUCTIONS...
+# ret=$?
 
 exit $ret

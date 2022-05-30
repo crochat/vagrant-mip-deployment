@@ -6,63 +6,76 @@ REQUIRED_OS_RELEASE="20.04"
 REQUIRED_DOCKER_VERSION="20.10.0"
 
 PREREQUIRED_PACKAGES="git apt-transport-https ca-certificates ssl-cert curl gnupg-agent software-properties-common net-tools whois lsof expect python3-pip"
-REQUIRED_PACKAGES="docker-ce docker-ce-cli docker-ce-rootless-extras containerd.io"
+REQUIRED_PACKAGES="docker-ce docker-ce-cli docker-ce-rootless-extras containerd.io docker-compose-plugin"
 REQUIRED_PIP3_PACKAGES="chardet"
-REQUIRED_CUSTOM_PACKAGES="docker-compose"
+REQUIRED_CUSTOM_PACKAGES=""
 
-SCRIPTS_PATH=""
-
-positional=()
+SCRIPTS_PATH=$(realpath $(dirname $0))
+POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
 		--scripts-path)
-			if [[ "$2" != "" && "$(echo "$2" | cut -c1)" != "-" ]]; then
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
 				SCRIPTS_PATH="$2"
 				shift
 			fi
 			shift
 			;;
 		*)
-			positional+=("$1")
+			POSITIONAL+=("$1")
 			shift
 			;;
 	esac
 done
+set -- "${POSITIONAL[@]}"
 
-if [[ ! -f $SCRIPTS_PATH/utils ]]; then
-	echo "ERROR: $SCRIPTS_PATH/utils: file not found!" >/dev/stderr
+if [[ ! -d $SCRIPTS_PATH ]]; then
+	echo "$SCRIPTS_PATH: no such file or directory!" >/dev/stderr
 	exit 1
 fi
 source $SCRIPTS_PATH/utils
 
-
 ret=1
 
-check_os
+check_os --greater-or-equal
 ret=$?
 if [[ $ret -eq 0 ]]; then
 	install_required_packages prerequired
 	ret=$?
+else
+	echo "Required OS version is not present!" >/dev/stderr
 fi
 
 if [[ $ret -eq 0 ]]; then
 	prepare_docker_apt_sources
 	ret=$?
+else
+	echo "Failed to install pre-required packages!" >/dev/stderr
 fi
 
 if [[ $ret -eq 0 ]]; then
 	install_required_packages required
 	ret=$?
+else
+	echo "Failed to prepare Docker APT sources!" >/dev/stderr
 fi
 
 if [[ $ret -eq 0 ]]; then
 	install_required_packages pip3
 	ret=$?
+else
+	echo "Failed to install required packages!" >/dev/stderr
 fi
 
 if [[ $ret -eq 0 ]]; then
 	install_required_custom_packages
 	ret=$?
+else
+	echo "Failed to install required PIP packages!" >/dev/stderr
+fi
+
+if [[ $ret -ne 0 ]]; then
+	echo "Failed to install custom packages!" >/dev/stderr
 fi
 
 exit $ret

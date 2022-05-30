@@ -4,12 +4,22 @@ VPN_HOST=""
 
 VPN_DEVICE=""
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
-		--vpn-host)
-			VPN_HOST="$2"
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
 			shift
+			;;
+		--vpn-host)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				VPN_HOST="$2"
+				shift
+			fi
 			shift
 			;;
 		*)

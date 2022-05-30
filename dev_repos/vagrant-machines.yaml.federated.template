@@ -11,7 +11,7 @@ global_parameters:
   external_mip_protocol: &external_mip_protocol https                # The protocol (http or https) used on the external reverse proxy
   public_mip_protocol: &public_mip_protocol https                    # The portal_frontend protocol (http or https). Usually http when proxied and https when direct.
   public_mip_host: &public_mip_host <VM_PREFIX>-ui.<DOMAIN_NAME>     # The public FQDN where we reach the MIP if direct, or the private FQDN or IP where the REVERSE PROXY reaches the MIP internally
-  keycloak_protocol: &keycloak_protocol https                        # The protocol (http or https) used to contact keycloak. Local MIP: usually https for both direct and proxied. Federated: usually https for external keycloak.
+  keycloak_protocol: &keycloak_protocol https                        # The protocol (http or https) used to contact keycloak. Local MIP: usually https for direct, http for proxied. Federated: usually https for external keycloak.
   keycloak_url: &keycloak_url <KEYCLOAK_URL>
   keycloak_realm: &keycloak_realm ''
   keycloak_client_id: &keycloak_client_id ''

@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 
-get_os(){
+args_to_list() {
+	list=""
+
+	while [[ $# -gt 0 ]]; do
+		if [[ "${list}" != "" ]]; then
+			list+=","
+		fi
+		list+="$1"
+		shift
+	done
+
+	echo "${list}"
+}
+
+get_os() {
 	local positional=()
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -34,8 +48,18 @@ get_os(){
 	set -- "${positional[@]}"
 }
 
-check_os(){
+check_os() {
 	local result=0
+
+	local message="Required OS version: "
+	if [[ "$1" = "--greater-or-equal" ]]; then
+		message+=">= "
+	else
+		message+="= "
+	fi
+	message+="$REQUIRED_OS_DISTRIBUTOR_ID $REQUIRED_OS_RELEASE!"
+	echo "$message"
+
 	if [[ "$(lsb_release -si)" != "$REQUIRED_OS_DISTRIBUTOR_ID" || "$(lsb_release -sr)" != "$REQUIRED_OS_RELEASE" ]]; then
 		if [[ "$1" = "--greater-or-equal" ]]; then
 			local required=$(echo $REQUIRED_OS_RELEASE | sed 's/\.//g')
@@ -48,7 +72,7 @@ check_os(){
 		fi
 
 		if [[ $result -eq 1 ]]; then
-			echo "Required OS version: $REQUIRED_OS_DISTRIBUTOR_ID $REQUIRED_OS_RELEASE!"
+			echo "Current OS version ($(lsb_release -si) $(lsb_release -sr)) doesn't match these requirements!" >/dev/stderr
 		fi
 	else
 		get_os --distrib-id-var 'DISTRIB_ID' --distrib-release-var 'DISTRIB_RELEASE' --distrib-codename-var 'DISTRIB_CODENAME'
@@ -57,7 +81,7 @@ check_os(){
 	return $result
 }
 
-apt_key_list_filecontent(){
+apt_key_list_filecontent() {
 	local KEY_FILE=""
 
 	local positional=()
@@ -76,7 +100,7 @@ apt_key_list_filecontent(){
 				;;
 		esac
 	done
-	set -- "$positional[@]"
+	set -- "${positional[@]}"
 
 	local result=1
 	if [[ "$KEY_FILE" != "" && -f $KEY_FILE ]]; then
@@ -87,7 +111,7 @@ apt_key_list_filecontent(){
 	return $result
 }
 
-apt_key_get_key_from_file(){
+apt_key_get_key_from_file() {
 	local KEY_FILE=""
 	local SEARCH_KEY=""
 	local KEY_VAR=""
@@ -122,7 +146,7 @@ apt_key_get_key_from_file(){
 				;;
 		esac
 	done
-	set -- "$positional[@]"
+	set -- "${positional[@]}"
 
 	local result=1
 	if [[ "$KEY_FILE" != "" && -f $KEY_FILE && "$SEARCH_KEY" != "" ]]; then
@@ -195,7 +219,7 @@ apt_key_get_key_from_file(){
 	return $result
 }
 
-apt_key_add(){
+apt_key_add() {
 	local keys_path="/etc/apt"
 	local sub_keys_path="trusted.gpg.d"
 
@@ -225,7 +249,7 @@ apt_key_add(){
 				;;
 		esac
 	done
-	set -- "$positional[@]"
+	set -- "${positional[@]}"
 
 	local result=1
 	local src_key_file=""
@@ -238,6 +262,7 @@ apt_key_add(){
 		if [[ "$(echo $KEY | grep '^http')" != "" ]]; then
 			src_key_file=$(mktemp /tmp/aptkey.XXXXXX)
 			if [[ "$src_key_file" != "" && -f $src_key_file ]]; then
+				echo "Downloading source key from $KEY to $src_key_file..." >/dev/stderr
 				curl -fsSL -o $src_key_file $KEY
 				result=$?
 			fi
@@ -250,7 +275,9 @@ apt_key_add(){
 	if [[ $result -eq 0 ]]; then
 		result=1
 
-		if [[ "$(file $src_key_file | grep -i 'PGP public key block Public-Key')" != "" ]]; then
+		echo "Source key format: $(file $src_key_file)" >/dev/stderr
+		if [[ "$(file $src_key_file | grep -i 'PGP public key block Public-Key')" != "" || "$(file $src_key_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
+			echo "Source key format ok" >/dev/stderr
 			result=0
 		fi
 	fi
@@ -261,6 +288,7 @@ apt_key_add(){
 		src_key_str=$(gpg --fingerprint --import-options show-only --import < $src_key_file 2>/dev/null | grep -A1 '^pub' | tail -1 | awk '{print $(NF-1)$(NF)}')
 
 		if [[ "$src_key_str" != "" ]]; then
+			echo "Source key fingerprint: $src_key_str" >/dev/stderr
 			result=0
 		fi
 	fi
@@ -274,7 +302,11 @@ apt_key_add(){
 			ret=$?
 
 			if [[ $ret -eq 0 ]]; then
+				echo "Source key already exists in local keyrings" >/dev/stderr
 				found_key=1
+				if [[ -f $src_key_file ]]; then
+					rm $src_key_file
+				fi
 				break
 			fi
 		done
@@ -288,7 +320,12 @@ apt_key_add(){
 		result=1
 
 		tmp_keyring_file=$(mktemp /tmp/aptkey_keyring.XXXXXX)
-		if [[ "$tmp_keyring_file" != "" && -f $tmp_keyring_file ]]; then
+		if [[ "$(file $src_key_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
+			echo "Source key is already in a final format" >/dev/stderr
+			cp $src_key_file $tmp_keyring_file
+			result=$?
+		elif [[ "$tmp_keyring_file" != "" && -f $tmp_keyring_file ]]; then
+			echo "Creating a keyring file from the source key..." >/dev/stderr
 			gpg --no-default-keyring --keyring $tmp_keyring_file --import $src_key_file
 			result=$?
 		fi
@@ -301,7 +338,10 @@ apt_key_add(){
 			rm $src_key_file
 		fi
 
-		if [[ "$(file $tmp_keyring_file | grep -i 'GPG keybox database')" != "" || "$(file $tmp_keyring_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
+		if [[ "$(file $tmp_keyring_file | grep -i 'GPG keybox database')" != "" || "$(file $tmp_keyring_file | grep -i 'GPG key public ring')" != "" ]]; then
+			echo "Keyring file has a valid format" >/dev/stderr
+			result=0
+		elif [[ "$(file $tmp_keyring_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
 			result=0
 		fi
 	fi
@@ -311,8 +351,14 @@ apt_key_add(){
 
 		tmp_key_file=$(mktemp /tmp/aptkey_final_key.XXXXXX)
 		if [[ "$tmp_key_file" != "" && -f $tmp_key_file ]]; then
-			gpg --no-default-keyring --keyring $tmp_keyring_file --export >$tmp_key_file
-			result=$?
+			if [[ "$(file $tmp_keyring_file | grep -i 'OpenPGP Public Key')" != "" ]]; then
+				cp $tmp_keyring_file $tmp_key_file
+				result=$?
+			else
+				echo "Exporting final key from the keyring..." >/dev/stderr
+				gpg --no-default-keyring --keyring $tmp_keyring_file --export >$tmp_key_file
+				result=$?
+			fi
 		fi
 	fi
 
@@ -336,7 +382,7 @@ apt_key_add(){
 	return $result
 }
 
-apt_key(){
+apt_key() {
 	local keys_path="/etc/apt"
 
 	local ACTION=""
@@ -379,6 +425,7 @@ apt_key(){
 				;;
 		esac
 	done
+	set -- "${positional[@]}"
 
 	local result=1
 
@@ -427,7 +474,9 @@ apt_key(){
 	return $result
 }
 
-prepare_docker_apt_sources(){
+prepare_docker_apt_sources() {
+	local result=1
+
 	local DISTRIB_ID=""
 	local DISTRIB_RELEASE=""
 	local DISTRIB_CODENAME=""
@@ -441,26 +490,109 @@ prepare_docker_apt_sources(){
 	if [[ $next -eq 1 ]]; then
 		next=0
 	else
-		return 1
+		return $result
 	fi
 
-	while [[ $next -eq 0 ]]; do
+	retries=3
+	while [[ $next -eq 0 && $retries -gt 0 ]]; do
 		next=1
 		apt_key add --key https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID/gpg --key-name docker
-		if [[ $? -ne 0 ]]; then
+		ret=$?
+		if [[ $ret -ne 0 ]]; then
+			echo "FAILED TO ADD DOCKER KEY!" >/dev/stderr
 			next=0
 		fi
 		if [[ $next -eq 1 && "$(grep -R $DOCKER_DOWNLOAD_HOST /etc/apt)" = "" ]]; then
 			export DEBIAN_FRONTEND=noninteractive
+			echo "Adding APT Docker repository..." >/dev/stderr
 			add-apt-repository "deb [arch=amd64] https://$DOCKER_DOWNLOAD_HOST/linux/$DISTRIB_ID $DISTRIB_CODENAME stable"
-			apt-get update
+			sync_packages
 			next=0
+		fi
+
+		if [[ $next -eq 0 ]]; then
+			retries=$((retries-1))
 		fi
 	done
 
+	if [[ $next -eq 1 ]]; then
+		result=0
+	fi
+
+	return $result
 }
 
-install_required_packages(){
+prepare_k8s_apt_sources() {
+	local result=1
+
+	local next=0
+
+	retries=3
+	while [[ $next -eq 0 && $retries -gt 0 ]]; do
+		next=1
+		apt_key add --key https://$K8S_KEYRING_HOST/apt/doc/apt-key.gpg --key-name kubernetes-archive-keyring
+		if [[ $? -ne 0 ]]; then
+			echo "FAILED TO ADD KUBERNETES KEY!" >/dev/stderr
+			next=0
+		fi
+		if [[ $next -eq 1 && "$(grep -R $K8S_PACKAGES_HOST /etc/apt)" = "" ]]; then
+			export DEBIAN_FRONTEND=noninteractive
+			echo "Adding APT Kubernetes repository..." >/dev/stderr
+			add-apt-repository "deb [arch=amd64] https://$K8S_PACKAGES_HOST/ kubernetes-xenial main"
+			sync_packages
+			next=0
+		fi
+
+		if [[ $next -eq 0 ]]; then
+			retries=$((retries-1))
+		fi
+	done
+
+	if [[ $next -eq 1 ]]; then
+		result=0
+	fi
+
+	return $result
+}
+
+sync_packages() {
+	local result=1
+
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get update
+	local ret=$?
+
+	return $ret
+}
+
+install_packages() {
+	local result=1
+
+	export DEBIAN_FRONTEND=noninteractive
+	local INSTALL_CMD="apt-get --yes --no-install-recommends --allow-change-held-packages install"
+
+	if [[ $# -gt 0 ]]; then
+		${INSTALL_CMD} $@
+		result=$?
+	fi
+
+	return $result
+}
+
+uninstall_packages() {
+	local result=1
+
+	local UNINSTALL_CMD="apt-get --yes --purge remove"
+
+	if [[ $# -gt 0 ]]; then
+		${UNINSTALL_CMD} $@
+		result=$?
+	fi
+
+	return $result
+}
+
+install_required_packages() {
 	local required_packages=""
 	case $1 in
 		prerequired)
@@ -491,21 +623,24 @@ install_required_packages(){
 			if [[ "$match" = "" ]]; then
 				packages="$packages $package"
 				next=0
+			elif [[ "$(apt list -a $package 2>/dev/null | grep upgradable)" != "" ]]; then
+				# TODO: MAKE IT WORK WITH DOCKER VERSION MAX LIMIT!!
+				packages="$packages $package"
+				next=0
 			fi
 		done
-		local install_option="-y"
 		if [[ $next -eq 0 ]]; then
 			if [[ "$1" = "pip3" ]]; then
 				pip3 install $packages
 			else
-				export DEBIAN_FRONTEND=noninteractive
-				apt-get update && apt-get install $install_option $packages
+				sync_packages
+				install_packages $packages
 			fi
 		fi
 	done
 }
 
-install_required_custom_packages(){
+install_required_custom_packages() {
 	local result=0
 	local packages=""
 	for package in $REQUIRED_CUSTOM_PACKAGES; do
@@ -525,7 +660,7 @@ install_required_custom_packages(){
 	return $result
 }
 
-install_custom_package_pyenv(){
+install_custom_package_pyenv() {
 	if [[ ! $(command -v pyenv) ]]; then
 		if [[ ! -d /usr/src/pyenv ]]; then
 			git clone https://github.com/pyenv/pyenv /usr/src/pyenv
@@ -540,14 +675,14 @@ install_custom_package_pyenv(){
 	fi
 }
 
-install_custom_package_python2(){
+install_custom_package_python2() {
 	if [[ "$(pyenv versions|grep 2.7.)" = "" ]]; then
 		local aptoption=""
 		if [[ $ARG_YES -eq 1 ]]; then
 			aptoption="-y"
 		fi
-		export DEBIAN_FRONTEND=noninteractive
-		apt-get update && apt-get install $aptoption build-essential zlib1g-dev libreadline-dev libbz2-dev libsqlite3-dev libssl-dev
+		sync_packages
+		install_packages build-essential zlib1g-dev libreadline-dev libbz2-dev libsqlite3-dev libssl-dev
 		echo "Installing Python 2.7. This may take a while..."
 		pyenv install 2.7.17
 	fi
@@ -564,7 +699,7 @@ install_custom_package_python2(){
 	ln -s python2-config /usr/bin/python-config
 }
 
-install_custom_package_docker-compose(){
+install_custom_package_docker-compose() {
 	local version=`curl --silent "https://api.github.com/repos/docker/compose/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
 	curl --silent -L "https://github.com/docker/compose/releases/download/$version/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 	chmod +x /usr/local/bin/docker-compose
@@ -583,4 +718,335 @@ domain_to_ldap() {
 	done <<< "$(echo $domain | tr '.' '\n')"
 
 	echo $ldap_string
+}
+
+normalize_wanted_kernel_version() {
+	if [[ "${federation_fixed_kernel_version}" != "" ]]; then
+		if [[ "$(echo ${federation_fixed_kernel_version} | grep "[0-9]$")" != "" ]]; then
+			federation_fixed_kernel_version="${federation_fixed_kernel_version}-generic"
+		fi
+	fi
+}
+
+get_full_wanted_kernel_version() {
+	echo "${federation_fixed_kernel_version}"
+}
+
+get_short_wanted_kernel_version() {
+	local version=$(get_full_wanted_kernel_version)
+	if [[ "$(echo ${version} | grep "\-generic$")" != "" ]]; then
+		version=$(echo ${version} | rev | cut -d'-' -f2- | rev)
+	fi
+
+	echo "${version}"
+}
+
+get_wanted_kernel_packages() {
+	local packages=()
+	local candidate
+	local package
+
+	for candidate in $(echo "image modules headers"); do
+		package="linux-${candidate}-$(get_full_wanted_kernel_version)"
+		packages+=("${package}")
+		if [[ "${candidate}" = "headers" ]]; then
+			package="linux-${candidate}-$(get_short_wanted_kernel_version)"
+			packages+=("${package}")
+		fi
+	done
+
+	echo "${packages[@]}"
+}
+
+get_limited_wanted_kernel_packages() {
+	local packages=()
+	local wanted_kernel_packages=$(get_wanted_kernel_packages)
+	local candidate
+	local package
+
+	for candidate in $(echo ${wanted_kernel_packages}); do
+		if [[ "${candidate}" != "linux-headers-$(get_full_wanted_kernel_version)" && "${candidate}" != "linux-headers-$(get_short_wanted_kernel_version)" ]]; then
+			packages+=("${candidate}")
+		fi
+	done
+
+	echo "${packages[@]}"
+}
+
+get_installed_wanted_kernel_packages() {
+	local packages=()
+	local wanted_kernel_packages=$(get_wanted_kernel_packages)
+	local candidate
+	local package
+
+	for candidate in $(echo ${wanted_kernel_packages}); do
+		while IFS=$'\n' read -r package; do
+			if [[ "${package}" != "" ]]; then
+				packages+=("${package}")
+			fi
+		done <<< $(dpkg --list | grep "^[hi]i[ ]*${candidate}[ ]" | awk '{print $2}')
+	done
+
+	echo "${packages[@]}"
+}
+
+get_available_wanted_kernel_packages() {
+	local SEARCH_CMD="apt-cache search"
+
+	local packages=()
+	local wanted_kernel_packages=$(get_wanted_kernel_packages)
+	local installed_wanted_kernel_packages=$(get_installed_wanted_kernel_packages)
+	local candidate
+	local package
+
+	for candidate in $(echo ${wanted_kernel_packages}); do
+		while IFS=$'\n' read -r package; do
+			if [[ "${package}" != "" && "$(echo "${installed_wanted_kernel_packages}" | grep -w "${package}")" = "" ]]; then
+				packages+=("${package}")
+			fi
+		done <<< $(${SEARCH_CMD} ${candidate} | grep "^${candidate}[ ]" | awk '{print $1}')
+	done
+
+	echo "${packages[@]}"
+}
+
+get_installed_unwanted_kernel_packages() {
+	local packages_var=""
+
+	local positional=()
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--packages-var)
+				if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+					packages_var="$2"
+					shift
+				fi
+				shift
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+	done
+	set -- "${positional[@]}"
+
+	local result=0
+
+	if [[ "$packages_var" != "" ]]; then
+		eval "${packages_var}=()"
+		local candidate
+		local package
+
+		for candidate in $(echo "image modules headers"); do
+			while IFS=$'\n' read -r package; do
+				if [[ "${package}" != "" ]]; then
+					if [[ "${package}" != "linux-image-$(uname -r)" && "${package}" != "linux-modules-$(uname -r)" ]]; then
+						eval "${packages_var}+=('${package}')"
+					else
+						echo "As you have to remove the kernel/modules which is currently running on this machine, the package <${package}> has to be ommitted from the current removal operation! The machine has to run on the targetted $(get_full_wanted_kernel_version) kernel prior to remove the current $(uname -r) version! This script will have to run again after rebooting on $(get_full_wanted_kernel_version) kernel!" >/dev/stderr
+						result=1
+					fi
+				fi
+			done <<< $(dpkg --list | grep "^.*[ ]*linux-${candidate}-" | grep -v "linux-${candidate}-$(get_short_wanted_kernel_version)" | awk '{print $2}')
+		done
+	fi
+
+	return $result
+}
+
+get_held_wanted_kernel_packages() {
+	local packages=()
+	local limited_wanted_kernel_packages=$(get_limited_wanted_kernel_packages)
+	local package
+
+	for package in $(echo ${limited_wanted_kernel_packages}); do
+		if [[ "$(apt-mark showhold ${package})" != "" ]]; then
+			packages+=("${package}")
+		fi
+	done
+
+	echo "${packages[@]}"
+}
+
+hold_wanted_kernel_packages() {
+	local result=1
+
+	local limited_wanted_kernel_packages=$(get_limited_wanted_kernel_packages)
+	local package
+
+	for package in $(echo ${limited_wanted_kernel_packages}); do
+		if [[ "$(dpkg --list | grep "$package " | grep "^[hi]i")" != "" ]]; then
+			apt-mark hold ${package}
+		fi
+	done
+
+	local held_wanted_kernel_packages=$(get_held_wanted_kernel_packages)
+	if [[ "${held_wanted_kernel_packages}" = "${limited_wanted_kernel_packages}" ]]; then
+		result=0
+	fi
+
+	return $result
+}
+
+get_wanted_kernel_grub_entry() {
+	local foundTag=""
+
+	local AllMenusArr=()										# All menu options.
+	# Default for hide duplicate and triplicate options with (upstart) and (recovery mode)?
+	local HideUpstartRecovery=false
+	local SkippedMenuEntry=false								# Don't change this value, automatically maintained
+	local InSubMenu=false										# Within a line beginning with `submenu`?
+	local InMenuEntry=false										# Within a line beginning with `menuentry` and ending in `{`?
+	local NextMenuEntryNo=0										# Next grub internal menu entry number to assign
+	# Major / Minor internal grub submenu numbers, ie `1>0`, `1>1`, `1>2`, etc.
+	local ThisSubMenuMajorNo=0
+	local NextSubMenuMinorNo=0
+	local CurrTag=""											# Current grub internal menu number, zero based
+	local CurrText=""											# Current grub menu option text, ie "Ubuntu", "Windows...", etc.
+	local SubMenuList=""										# Only supports 10 submenus! Numbered 0 to 9. Future use.
+
+	local line
+	local BlackLine
+	while read -r line; do
+		# Example: "           }"
+		BlackLine="${line//[[:blank:]]/}" 				# Remove all whitespace
+		if [[ $BlackLine == "}" ]] ; then
+			# Add menu option in buffer
+			if [[ $SkippedMenuEntry == true ]] ; then
+				NextSubMenuMinorNo=$(( $NextSubMenuMinorNo + 1 ))
+				SkippedMenuEntry=false
+				continue
+			fi
+			if [[ $InMenuEntry == true ]] ; then
+				InMenuEntry=false
+				if [[ $InSubMenu == true ]] ; then
+					NextSubMenuMinorNo=$(( $NextSubMenuMinorNo + 1 ))
+				else
+					NextMenuEntryNo=$(( $NextMenuEntryNo + 1 ))
+				fi
+			elif [[ $InSubMenu == true ]] ; then
+				InSubMenu=false
+				NextMenuEntryNo=$(( $NextMenuEntryNo + 1 ))
+			else
+				continue								# Future error message?
+			fi
+			# Set maximum CurrText size to 68 characters.
+			CurrText="${CurrText:0:67}"
+			if [[ "$(echo $CurrText | grep "$(get_full_wanted_kernel_version)$")" != "" ]]; then
+				foundTag=$CurrTag
+			fi
+			AllMenusArr+=($CurrTag "$CurrText")
+		fi
+
+		# Example: "menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu" ...
+		#          "submenu 'Advanced options for Ubuntu' $menuentry_id_option" ...
+		if [[ $line == submenu* ]] ; then
+			# line starts with `submenu`
+			InSubMenu=true
+			ThisSubMenuMajorNo=$NextMenuEntryNo
+			NextSubMenuMinorNo=0
+			SubMenuList=$SubMenuList$ThisSubMenuMajorNo
+			CurrTag=$NextMenuEntryNo
+			CurrText="${line#*\'}"
+			CurrText="${CurrText%%\'*}"
+			#AllMenusArr+=($CurrTag "$CurrText")			# ie "1 Advanced options for Ubuntu"
+		elif [[ $line == menuentry* ]] && [[ $line == *"{"* ]] ; then
+			# line starts with `menuentry` and ends with `{`
+			if [[ $HideUpstartRecovery == true ]] ; then
+				if [[ $line == *"(upstart)"* ]] || [[ $line == *"(recovery mode)"* ]] ; then
+					SkippedMenuEntry=true
+					continue
+				fi
+			fi
+			InMenuEntry=true
+			if [[ $InSubMenu == true ]] ; then
+				: # In a submenu, increment minor instead of major which is "sticky" now.
+				CurrTag=$ThisSubMenuMajorNo">"$NextSubMenuMinorNo
+			else
+				CurrTag=$NextMenuEntryNo
+			fi
+			CurrText="${line#*\'}"
+			CurrText="${CurrText%%\'*}"
+		else
+			continue									# Other stuff - Ignore it.
+		fi
+	done < /boot/grub/grub.cfg
+
+	echo "$foundTag"
+}
+
+fix_federation_docker_swarm_kernel_version() {
+	local result=0
+
+	local version=$1
+	if [[ "$version" != "" ]]; then
+		federation_fixed_kernel_version=$version
+
+		normalize_wanted_kernel_version
+		if [[ "$(get_full_wanted_kernel_version)" != "" ]]; then
+			local wanted_kernel_packages=$(get_wanted_kernel_packages)
+			local limited_wanted_kernel_packages=$(get_limited_wanted_kernel_packages)
+			local installed_wanted_kernel_packages=$(get_installed_wanted_kernel_packages)
+			local installed_unwanted_kernel_packages
+			get_installed_unwanted_kernel_packages --packages-var "installed_unwanted_kernel_packages" 2>/dev/null
+			local unwanted_ret=$?
+			local held_wanted_kernel_packages=$(get_held_wanted_kernel_packages)
+
+			if [[ "${installed_wanted_kernel_packages}" != "${wanted_kernel_packages}" || ${#installed_unwanted_kernel_packages[@]} -gt 0 || $unwanted_ret -ne 0 || "${held_wanted_kernel_packages}" != "${wanted_kernel_packages}" ]]; then
+				if [[ "${installed_wanted_kernel_packages}" != "${wanted_kernel_packages}" ]]; then
+					local available_wanted_kernel_packages=$(get_available_wanted_kernel_packages)
+					echo "Installing required kernel packages..."
+					install_packages ${available_wanted_kernel_packages}
+					ret=$?
+					if [[ $ret -ne 0 ]]; then
+						result=$ret
+					fi
+				fi
+
+				if [[ "${installed_unwanted_kernel_packages[@]}" != "" ]]; then
+					echo "Uninstalling unwanted kernel packages..."
+					uninstall_packages ${installed_unwanted_kernel_packages[@]}
+					ret=$?
+					if [[ $ret -ne 0 ]]; then
+						result=$ret
+					fi
+				fi
+
+				if [[ "${held_wanted_kernel_packages}" != "${limited_wanted_kernel_packages}" ]]; then
+					echo "Marking wanted kernel packages as <hold>..."
+					hold_wanted_kernel_packages
+					ret=$?
+					if [[ $ret -ne 0 ]]; then
+						result=$ret
+					fi
+				fi
+
+				installed_wanted_kernel_packages=$(get_installed_wanted_kernel_packages)
+				installed_unwanted_kernel_packages=()
+				get_installed_unwanted_kernel_packages --packages-var "installed_unwanted_kernel_packages"
+				unwanted_ret=$?
+				held_wanted_kernel_packages=$(get_held_wanted_kernel_packages)
+
+				if [[ "${installed_wanted_kernel_packages}" = "${wanted_kernel_packages}" && ${#installed_unwanted_kernel_packages} -eq 0 && $unwanted_ret -eq 0 && "${held_wanted_kernel_packages}" = "${limited_wanted_kernel_packages}" ]]; then
+					echo "System OK"
+				else
+					echo "There was an error during the full process!" >/dev/stderr
+					if [[ "$(echo "${installed_wanted_kernel_packages}" | grep "linux-image-$(get_full_wanted_kernel_version)")" != "" && "$(uname -r)" != "$(get_full_wanted_kernel_version)" ]]; then
+						wanted_grub_entry=$(get_wanted_kernel_grub_entry)
+						if [[ "${wanted_grub_entry}" != "" ]]; then
+							echo "One of the reasons may also be that we're not currently running on the targetted <$(get_full_wanted_kernel_version)> kernel!"
+							echo "As this wanted kernel is installed, I'll mark it ('${wanted_grub_entry}' Grub menu entry) to be booted on the next reboot."
+							grub-reboot "${wanted_grub_entry}"
+						fi
+					fi
+					result=2
+				fi
+			fi
+		fi
+	else
+		result=1
+	fi
+
+	return $result
 }

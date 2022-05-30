@@ -1,5 +1,24 @@
 #!/usr/bin/env bash
 
+SCRIPTS_PATH=$(realpath $(dirname $0))
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--scripts-path)
+			if [[ "$2" != "" && "$(echo $2 | cut -c1)" != "-" ]]; then
+				SCRIPTS_PATH="$2"
+				shift
+			fi
+			shift
+			;;
+		*)
+			POSITIONAL+=("$1")
+			shift
+			;;
+	esac
+done
+set -- "${POSITIONAL[@]}"
+
 ret=1
 
 passwd --lock vagrant

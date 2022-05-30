@@ -141,6 +141,17 @@ if [[ $ret -eq 0 && "$EXAREME_IP" = "" ]]; then
 	fi
 fi
 
+#if [[ $ret -eq 0 ]]; then
+#	if [[ -f /vagrant/dev_repos/mip-deployment/Federation/docker-compose.yml ]]; then
+#		if [[ -f /opt/mip-deployment/Federation/docker-compose.yml ]]; then
+#			mv /opt/mip-deployment/Federation/docker-compose.yml /opt/mip-deployment/Federation/docker-compose.yml.bak
+#		fi
+#		if [[ ! -s /opt/mip-deployment/Federation/docker-compose.yml ]]; then
+#			ln -s /vagrant/dev_repos/mip-deployment/Federation/docker-compose.yml /opt/mip-deployment/Federation/docker-compose.yml
+#		fi
+#	fi
+#fi
+
 if [[ $ret -eq 0 ]]; then
 	# --host MUST MATCH YOUR DESKTOP <HOST> IP or FQDN (i.e. if behind a reverse-proxy)
 	echo "Configuring the MIP UI..."

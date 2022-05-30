@@ -24,6 +24,7 @@ require 'yaml'
 require 'erb'
 
 provisioning_report_file = '/root/provision'
+scripts_base_path = '/vagrant'
 before_provision_trigger_script_filename = 'inside_vagrant_only.trigger.before_provision'
 
 def self.deep_merge!(tgt_hash, src_hash)
@@ -242,10 +243,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             if provision.has_key? 'name'
               if provisioning_report.nil? or not provisioning_report.include? provision['name']
                 if provision.has_key? 'type'
-                  args = nil
+                  args = ['--scripts-path', File.join(scripts_base_path, params['global_parameters']['scripts_path'])]
                   dyn_args = nil
                   if provision[provision['type']].has_key? 'args'
-                    args = reprovision[provision['type']]['args']
+                    args = args.concat(reprovision[provision['type']]['args'])
                   elsif provision[provision['type']].has_key? 'dyn_args'
                     dyn_args = reprovision[provision['type']]['dyn_args']
                     dyn_args.each do |dyn_arg|
@@ -284,10 +285,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
       s.trigger.before [:halt, :suspend, :reload, :destroy] do |trigger|
         trigger.info = "Trigger: Before halt, suspend, reload, destroy of #{vmname}!"
-        trigger.run = {inline: "bash -c 'rsshfs -F #{generated_ssh_config_file} -q -u #{vmname}:/vagrant'"}
+        trigger.run = {inline: "bash -c 'rsshfs -F #{generated_ssh_config_file} -q -u #{vmname}:#{scripts_base_path}'"}
       end
     end
   end
 
-  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder ".", scripts_base_path, disabled: true
 end
