@@ -246,9 +246,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                   args = ['--scripts-path', File.join(scripts_base_path, params['global_parameters']['scripts_path'])]
                   dyn_args = nil
                   if provision[provision['type']].has_key? 'args'
-                    args = args.concat(reprovision[provision['type']]['args'])
+                    if provision[provision['type']]['args'].is_a? Array
+                      args = args.concat(provision[provision['type']]['args'])
+                    elsif provision[provision['type']]['args'].is_a? String
+                      args.append(provision[provision['type']]['args'])
+                    end
                   elsif provision[provision['type']].has_key? 'dyn_args'
-                    dyn_args = reprovision[provision['type']]['dyn_args']
+                    dyn_args = provision[provision['type']]['dyn_args']
                     dyn_args.each do |dyn_arg|
                       if info.has_key? dyn_arg.gsub('-', '_') and not info[dyn_arg.gsub('-', '_')].nil? and info[dyn_arg.gsub('-', '_')] != ''
                         if args.nil?
